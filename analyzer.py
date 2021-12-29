@@ -5,13 +5,18 @@ import string
 
 import pexpect
 import os
+import csv
+import pandas as pd
 
 
 class Analyzer(object):
 
     def __init__(self, debug=False):
+        # Analyze task handle
         self._analyze_task = None
+        # Ql select task handle
         self._ql_task = None
+        # Language Type
         self.language_type = None
 
         if debug:
@@ -22,6 +27,13 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def analyze_create(self, src, external_cmd=None):
+        """
+        Create database for a project
+        :param src: file path
+        :param external_cmd: additional command. For instance, Cpp may use 'make' to build the project.
+        :return: True or False
+        """
+
         # If a file has been analyzed
         if os.path.exists(f"{src}/{self.language_type}_database"):
             if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
@@ -48,6 +60,12 @@ class Analyzer(object):
         return True
 
     def ql_analyze(self, src, threads=1):
+        """
+        Run Ql file to analyze the database
+        :param src: file path
+        :param threads: thread for running (default=1)
+        """
+
         # Check the file has been analyzed
         if os.path.exists(f"{src}/{self.language_type}_database "):
             if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
@@ -72,20 +90,33 @@ class Analyzer(object):
                 logging.error(f'A fatal error')
                 break
 
-    def decode_bqrs(self, src, outformat: string = 'json'):
+    def decode_bqrs2json(self, src):
         """
-        Decode the bqrs to others
+        Decode the .bqrs file to json
         :param src:
-        :param outformat: json, csv
         :return: result
         """
         path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
         # analyze ql command
-        cmd = f"codeql bqrs decode --format={outformat} --output={src}/out.{outformat} {path}"
+        cmd = f"codeql bqrs decode --format=json --output={src}/out.json {path}"
         os.system(cmd)
 
         with open(f'{src}/out.json', 'r') as f:
             out = json.load(f)
+        return out
+
+    def decode_bqrs2csv(self, src):
+        """
+        Decode the .bqrs file to csv
+        :param src:
+        :return: result
+        """
+        path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
+        # analyze ql command
+        cmd = f"codeql bqrs decode --format=csv --output={src}/out.csv {path}"
+        os.system(cmd)
+
+        out = pd.read_csv(f'{src}/out.csv')
         return out
 
 
@@ -103,14 +134,4 @@ class CppAnalyzer(Analyzer):
         self.language_type = "cpp"
 
 
-
-if __name__ == '__main__':
-    # analyzer = JavaAnalyzer(True)
-    # # analyzer.analyze_create('/home/rain/program/java/mall')
-    # # analyzer.ql_analyze('/home/rain/program/java/mall')
-    # analyzer.decode_bqrs('/home/rain/program/java/mall')
-    analyzer = CppAnalyzer(True)
-    # analyzer.analyze_create('/home/rain/program/cpp/ffmpeg-3.0')
-    # analyzer.ql_analyze('/home/rain/program/cpp/ffmpeg-3.0')
-    analyzer.decode_bqrs('/home/rain/program/cpp/ffmpeg-3.0')
 

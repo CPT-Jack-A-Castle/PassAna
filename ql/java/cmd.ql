@@ -8,23 +8,37 @@
 import java
 import semmle.code.java.dataflow.TaintTracking
 import DataFlow::PathGraph
+import semmle.code.java.dataflow.FlowSources
 
-predicate isPass(Variable arg){
-    arg.getName().regexpMatch("\\w*[Pp]ass\\w*")
+
+
+class GetPassSink extends DataFlow::ExprNode{
+    GetPassSink(){
+        exists(Variable var| var = this.asExpr().(VarAccess).getVariable() | var.getName().regexpMatch("\\w*[Pp]ass\\w*"))
+    }
+}
+
+class GetPassSource extends DataFlow::ExprNode{
+    GetPassSource(){
+        exists(Variable var|
+             var = this.asExpr().(VarAccess).getVariable())
+    }
 }
 
 class DataConfig extends TaintTracking::Configuration {
     DataConfig() { this = "<some unique identifier>" }
     override predicate isSource(DataFlow::Node nd) {
-       exists(Variable var | isPass(var) and nd.asExpr().(VarAccess).getVariable() = var)
+       nd instanceof GetPassSource
     }
     override predicate isSink(DataFlow::Node nd) {
-        nd.asExpr() instanceof VarAccess
-    }
+        nd instanceof GetPassSink}
 }
 
 from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
 where cfg.hasFlowPath(source, sink)
-select source.toString(), sink.toString()
-
-
+select
+sink.getNode().asExpr().getControlFlowNode().toString(),
+source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + "-" +
+source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
+source.getNode().asExpr().(VarAccess).getVariable().getName().toString(),
+source.getNode().asExpr().(VarAccess).getVariable().getType().toString()
