@@ -60,7 +60,7 @@ class Analyzer(object):
         cmd = f"codeql database analyze  " \
               f"{src}/{self.language_type}_database ql/{self.language_type}/cmd.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
-        print(cmd)
+
         self._ql_task = pexpect.spawn(cmd,timeout=3600)
         while True:
             line = self._ql_task.readline().decode()
@@ -79,7 +79,7 @@ class Analyzer(object):
         :param outformat: json, csv
         :return: result
         """
-        path = f"{src}/java_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
+        path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
         # analyze ql command
         cmd = f"codeql bqrs decode --format={outformat} --output={src}/out.{outformat} {path}"
         os.system(cmd)
@@ -106,10 +106,11 @@ class CppAnalyzer(Analyzer):
 
 if __name__ == '__main__':
     # analyzer = JavaAnalyzer(True)
-    # analyzer.analyze_create('/home/rain/program/java/mall')
-    # analyzer.ql_analyze('/home/rain/program/java/mall')
+    # # analyzer.analyze_create('/home/rain/program/java/mall')
+    # # analyzer.ql_analyze('/home/rain/program/java/mall')
     # analyzer.decode_bqrs('/home/rain/program/java/mall')
     analyzer = CppAnalyzer(True)
-    analyzer.analyze_create('/home/rain/program/cpp/ffmpeg-3.0')
-    analyzer.ql_analyze('/home/rain/program/cpp/ffmpeg-3.0')
+    # analyzer.analyze_create('/home/rain/program/cpp/ffmpeg-3.0')
+    # analyzer.ql_analyze('/home/rain/program/cpp/ffmpeg-3.0')
+    analyzer.decode_bqrs('/home/rain/program/cpp/ffmpeg-3.0')
 

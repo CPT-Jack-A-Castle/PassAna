@@ -23,11 +23,8 @@ class DataConfig extends TaintTracking::Configuration {
     }
 }
 
-// from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
-// where cfg.hasFlowPath(source, sink)
-// select source.toString(), sink.toString()
+from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+where cfg.hasFlowPath(source, sink)
+select source.toString(), sink.toString()
 
-from BlockStmt b
-where b.getNumStmt() = 0
-select b, "This is an empty block."
 

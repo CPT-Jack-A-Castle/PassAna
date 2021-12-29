@@ -2,8 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/ql/vscode-codeql-starter" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/ql/vscode-codeql-starter/codeql-go" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/ql/vscode-codeql-starter/ql" vcs="Git" />
   </component>
 </project>
