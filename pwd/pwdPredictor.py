@@ -8,19 +8,18 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers import Dense, Conv1D, GlobalMaxPooling1D, GlobalAveragePooling1D
 from keras.layers import Embedding
+from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from datasets import load_dataset
 from keras.preprocessing import sequence
 from keras.preprocessing.text import Tokenizer, text_to_word_sequence
 from tqdm import tqdm
 
-
-
-MAX_NB_WORDS=10000
+MAX_NB_WORDS = 10000
 
 
 class Predictor(object):
-    def __init__(self,  padding_len, class_num, debug=False):
+    def __init__(self, padding_len, class_num, debug=False):
         self.padding_len: int = padding_len
         self.class_num = class_num
 
@@ -110,6 +109,8 @@ class Predictor(object):
 
         # padding the cols to padding_len
         texts = sequence.pad_sequences(texts, maxlen=self.padding_len)
+        # trans label to label type
+        labels = to_categorical(labels)
         return texts, labels
 
     def load_tokenizer(self, src):
@@ -119,7 +120,6 @@ class Predictor(object):
     def save_tokenizer(self, src):
         # TODO
         pass
-
 
     @staticmethod
     def load_data(src):
@@ -146,9 +146,10 @@ class Predictor(object):
 
 
 class FastTextPredictor(Predictor):
-    def __init__(self, padding_len, class_num, debug=False):
+    def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
         super(FastTextPredictor, self).__init__(padding_len, class_num, debug)
-
+        self.embedding_dim = embedding_dim
+        
     def create_model(self):
         """
         create keras model
@@ -156,23 +157,23 @@ class FastTextPredictor(Predictor):
         """
         logging.info("Create Model...")
         model = Sequential()
-        model.add(Embedding(self.max_word, 50, input_length=self.padding_len))
+        model.add(Embedding(self.max_word, self.embedding_dim, input_length=self.padding_len))
         model.add(GlobalAveragePooling1D())
-        model.add(Dense(1, activation='sigmoid'))
+        model.add(Dense(self.class_num, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         model.summary()
         self.model = model
 
+
 if __name__ == '__main__':
-    dataset = load_dataset(
-        'sst', 'default')
-    fastTextPredictor = FastTextPredictor(128, 2)
+    dataset = load_dataset('sst', 'default')
 
     X = np.array(dataset.data['train'][0])
     Y = np.array(dataset.data['train'][1]).round()
 
+    fastTextPredictor = FastTextPredictor(128, 2)
     X, Y = fastTextPredictor.words2vec(X, Y, True)
-
     train_data, valid_data = FastTextPredictor.train_valid_split(X, Y)
+
     fastTextPredictor.create_model()
-    fastTextPredictor.run(train_data, valid_data, 100, 64)
+    fastTextPredictor.run(train_data, valid_data, epochs=25, batch_size=64)
