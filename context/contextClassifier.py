@@ -14,7 +14,7 @@ from tool import MyTokenizer, train_valid_split, load_embedding
 MAX_NB_WORDS = 10000
 
 
-class ContextClassifier(object):
+class ContextClassifier:
     def __init__(self, padding_len, class_num, debug=False):
         self.padding_len: int = padding_len
         self.class_num = class_num
@@ -57,9 +57,9 @@ class ContextClassifier(object):
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
-            self.tokenizer.save_tokenizer(f"D:\program\PassAna\\tokenizer\context.pkl")
+            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\context.pkl")
         else:
-            self.tokenizer.load_tokenizer(f"D:\program\PassAna\\tokenizer\context.pkl")
+            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\context.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
         # integer encode the documents

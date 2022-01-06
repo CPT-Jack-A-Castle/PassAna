@@ -16,7 +16,7 @@ from tool import MyTokenizer, train_valid_split
 MAX_NB_WORDS = 10000
 
 
-class Predictor(object):
+class Predictor:
     def __init__(self, padding_len, class_num, debug=False):
         self.padding_len: int = padding_len
         self.class_num = class_num
