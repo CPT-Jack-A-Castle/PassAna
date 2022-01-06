@@ -1,19 +1,17 @@
 import logging
-import os
 from abc import abstractmethod
 
 import nltk
-import pandas as pd
 import numpy as np
-from keras.models import Sequential
-from keras.layers import Dense, Conv1D, GlobalMaxPooling1D, GlobalAveragePooling1D
-from keras.layers import Embedding
-from keras.utils import to_categorical
-from sklearn.model_selection import train_test_split, StratifiedKFold, KFold
 from datasets import load_dataset
+from keras.layers import Dense, GlobalAveragePooling1D
+from keras.layers import Embedding
+from keras.models import Sequential
 from keras.preprocessing import sequence
-from keras.preprocessing.text import Tokenizer, text_to_word_sequence
+from keras.utils import to_categorical
 from tqdm import tqdm
+
+from tool import MyTokenizer, train_valid_split
 
 MAX_NB_WORDS = 10000
 
@@ -24,8 +22,7 @@ class Predictor(object):
         self.class_num = class_num
 
         self.model: Sequential = None
-        self.tokenizer: Tokenizer = None
-        self.max_word: int = None
+        self.tokenizer: MyTokenizer = MyTokenizer()
 
         if debug:
             logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - '
@@ -50,7 +47,7 @@ class Predictor(object):
                        validation_data=(valid[0], valid[1]),
                        shuffle=True)
 
-    def pre_processing_str(self, texts):
+    def processing_texts(self, texts):
         """
         Divide the texts to words
         :param texts:
@@ -68,7 +65,7 @@ class Predictor(object):
 
     def fit_words_dict(self, processed_docs_train):
         logging.info("Tokenizing input data...")
-        tokenizer = Tokenizer(num_words=MAX_NB_WORDS, lower=False, char_level=False)
+        tokenizer = MyTokenizer(num_words=MAX_NB_WORDS, lower=False, char_level=False)
         tokenizer.fit_on_texts(processed_docs_train)
         self.tokenizer = tokenizer
 
@@ -84,9 +81,6 @@ class Predictor(object):
 
         # Process
         word_seq_train = self.tokenizer.texts_to_sequences(processed_docs_train)
-        word_index = self.tokenizer.word_index
-        self.max_word = len(word_index)
-        logging.info("Dictionary size: ", len(word_index))
 
         return word_seq_train
 
@@ -99,57 +93,33 @@ class Predictor(object):
         :return: texts, labels
         """
 
-        texts = self.pre_processing_str(texts)
+        # process to word
+        texts = self.processing_texts(texts)
+
+        # Load or fit dict()
         if fit:
             self.fit_words_dict(texts)
-            self.save_tokenizer('a')
+            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\pwd.pkl")
         else:
-            self.load_tokenizer('b')
+            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\pwd.pkl")
+        logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
+
+        # words to vector
         texts = self.tokenizer_words(texts)
 
         # padding the cols to padding_len
         texts = sequence.pad_sequences(texts, maxlen=self.padding_len)
         # trans label to label type
         labels = to_categorical(labels)
+
         return texts, labels
-
-    def load_tokenizer(self, src):
-        # TODO
-        pass
-
-    def save_tokenizer(self, src):
-        # TODO
-        pass
-
-    @staticmethod
-    def load_data(src):
-        """
-        Load text
-        :param src:
-        :return:
-        """
-        data_df = pd.read_csv(src)
-        X = data_df['string']
-        Y = data_df['label']
-        return X, Y
-
-    @staticmethod
-    def train_valid_split(X, Y):
-        """
-        Split the value to train and valid
-        :param X: X[[],[]]
-        :param Y: Y[,]
-        :return:
-        """
-        train_X, valid_X, train_Y, valid_Y = train_test_split(X, Y, test_size=0.2, random_state=0)
-        return [train_X, np.array(train_Y, dtype=int)], [valid_X, np.array(valid_Y, dtype=int)]
 
 
 class FastTextPredictor(Predictor):
     def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
         super(FastTextPredictor, self).__init__(padding_len, class_num, debug)
         self.embedding_dim = embedding_dim
-        
+
     def create_model(self):
         """
         create keras model
@@ -157,7 +127,7 @@ class FastTextPredictor(Predictor):
         """
         logging.info("Create Model...")
         model = Sequential()
-        model.add(Embedding(self.max_word, self.embedding_dim, input_length=self.padding_len))
+        model.add(Embedding(self.tokenizer.vocab_size(), self.embedding_dim, input_length=self.padding_len))
         model.add(GlobalAveragePooling1D())
         model.add(Dense(self.class_num, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -171,9 +141,9 @@ if __name__ == '__main__':
     X = np.array(dataset.data['train'][0])
     Y = np.array(dataset.data['train'][1]).round()
 
-    fastTextPredictor = FastTextPredictor(128, 2)
-    X, Y = fastTextPredictor.words2vec(X, Y, True)
-    train_data, valid_data = FastTextPredictor.train_valid_split(X, Y)
+    fastTextPredictor = FastTextPredictor(padding_len=128, class_num=2)
+    X, Y = fastTextPredictor.words2vec(X, Y, False)
+    train_data, valid_data = train_valid_split(X, Y)
 
     fastTextPredictor.create_model()
     fastTextPredictor.run(train_data, valid_data, epochs=25, batch_size=64)
