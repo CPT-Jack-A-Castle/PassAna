@@ -9,7 +9,7 @@ from keras.models import Sequential
 from keras.utils import to_categorical
 from keras_preprocessing.sequence import pad_sequences
 
-from tool import MyTokenizer, train_valid_split, load_embedding
+from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding
 
 MAX_NB_WORDS = 10000
 
@@ -39,7 +39,7 @@ class ContextClassifier:
         if self.model is None:
             logging.error('Model is None')
             raise ValueError('Create model at first!')
-        print(f"X: {train[0].shape} Y:{train[1].shape}")
+        logging.info(f"X: {train[0].shape} Y:{train[1].shape}")
         self.model.fit(train[0], train[1],
                        epochs=epochs, batch_size=batch_size,
                        validation_data=(valid[0], valid[1]),
@@ -76,8 +76,8 @@ class CNNClassifierGlove(ContextClassifier, ABC):
     def __init__(self, padding_len, class_num, glove_dim=50, debug=False):
         super(CNNClassifierGlove, self).__init__(padding_len, class_num, debug)
         if glove_dim not in [50, 100, 200, 300]:
-            logging.error(f'Not support this glove_dim {glove_dim}, which must in [50, 100, 200, 300]')
-            raise ValueError(f'Not support this glove_dim {glove_dim}, which must in [50, 100, 200, 300]')
+            logging.error(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
+            raise ValueError(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
 
         self.glove_dim = glove_dim
         self.embedding_matrix = None
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     X = np.array(dataset.data['train'][0])
     Y = np.array(dataset.data['train'][1]).round()
 
-    cnnClassifier = CNNClassifierGlove(padding_len=128, class_num=2, glove_dim=50)
+    cnnClassifier = CNNClassifierGlove(padding_len=128, class_num=2, glove_dim=60)
 
     X, Y = cnnClassifier.words2vec(X, Y, fit=False)
     cnnClassifier.get_matrix_6b(f"D:\\program\\glove.6B")

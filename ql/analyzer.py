@@ -71,7 +71,7 @@ class Analyzer(object):
             if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
                 return
             else:
-                logging.warning('Src have no src.zip')
+                logging.error('Src have no src.zip')
                 raise ValueError('Analyze src at first!')
 
         # analyze ql command
@@ -79,7 +79,7 @@ class Analyzer(object):
               f"{src}/{self.language_type}_database ql/{self.language_type}/cmd.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
-        self._ql_task = pexpect.spawn(cmd,timeout=3600)
+        self._ql_task = pexpect.spawn(cmd, timeout=3600)
         while True:
             line = self._ql_task.readline().decode()
             logging.debug(line)
@@ -111,13 +111,39 @@ class Analyzer(object):
         :param src:
         :return: result
         """
-        path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
+        path = f"{src}/{self.language_type}_database/results/" \
+               f"getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
         # analyze ql command
         cmd = f"codeql bqrs decode --format=csv --output={src}/out.csv {path}"
         os.system(cmd)
 
+    @staticmethod
+    def load_project_csv(src):
         out = pd.read_csv(f'{src}/out.csv')
         return out
+
+    @staticmethod
+    def create_dfg_from_csv(csv: pd.DataFrame):
+        groups = csv.groupby(['col0', 'col1'])
+        context = dict()
+        for group_key, group_value in groups:
+            variable_name = group_key[0].split()
+
+            words = ";".join(group_value['col2'])
+            words = words.split(';')
+            words = set(words)
+            variable_context = " ".join(words)
+            variable_context = process_text(variable_context)
+
+            context[variable_name] = variable_context
+        return context
+
+
+def process_text(text):
+    variable_context = text.replace('(...)', '')
+    variable_context = variable_context.replace('...', '')
+    variable_context = variable_context.replace('=', '')
+    return variable_context
 
 
 class JavaAnalyzer(Analyzer):
@@ -132,6 +158,13 @@ class CppAnalyzer(Analyzer):
     def __init__(self, debug):
         super(CppAnalyzer, self).__init__(debug)
         self.language_type = "cpp"
+
+
+class PythonAnalyzer(Analyzer):
+
+    def __init__(self, debug):
+        super(PythonAnalyzer, self).__init__(debug)
+        self.language_type = "python"
 
 
 

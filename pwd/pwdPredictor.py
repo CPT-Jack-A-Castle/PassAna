@@ -11,7 +11,7 @@ from keras.preprocessing import sequence
 from keras.utils import to_categorical
 from tqdm import tqdm
 
-from tool import MyTokenizer, train_valid_split
+from tokenizer.tool import MyTokenizer, train_valid_split
 
 MAX_NB_WORDS = 10000
 
