@@ -15,8 +15,8 @@ class GetPass extends DataFlow::ExprNode{
     GetPass(){
         exists(Variable var| var = this.asExpr().(VarAccess).getVariable()|
         var.getName().regexpMatch("\\w*[Pp]ass\\w*") or
-        var.getName().regexpMatch("\\w*token\\w*")  // or
-        // var.getName().regexpMatch("\\w*Token\\w*")
+        var.getName().regexpMatch("\\w*token\\w*")  or
+        var.getName().regexpMatch("\\w*Token\\w*")
         )
     }
 }
