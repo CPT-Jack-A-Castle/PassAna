@@ -1,16 +1,18 @@
+import hashlib
 import logging
+import sys
 from abc import abstractmethod
 
 import nltk
 import numpy as np
 from datasets import load_dataset
-from keras.layers import Dense, GlobalAveragePooling1D
+from keras.layers import Dense, GlobalAveragePooling1D, Flatten, Conv2D, Conv1D
 from keras.layers import Embedding
 from keras.models import Sequential
 from keras.preprocessing import sequence
-from keras.utils import to_categorical
+from keras.utils.np_utils import to_categorical
 from tqdm import tqdm
-
+import pandas as pd
 from tokenizer.tool import MyTokenizer, train_valid_split
 
 MAX_NB_WORDS = 10000
@@ -47,7 +49,27 @@ class Predictor:
                        validation_data=(valid[0], valid[1]),
                        shuffle=True)
 
-    def processing_texts(self, texts):
+
+class FastTextPredictor(Predictor):
+    def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
+        super(FastTextPredictor, self).__init__(padding_len, class_num, debug)
+        self.embedding_dim = embedding_dim
+
+    def create_model(self):
+        """
+        create keras model
+        :return:
+        """
+        logging.info("Create Model...")
+        model = Sequential()
+        model.add(Embedding(self.tokenizer.vocab_size(), self.embedding_dim, input_length=self.padding_len))
+        model.add(GlobalAveragePooling1D())
+        model.add(Dense(self.class_num, activation='sigmoid'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.summary()
+        self.model = model
+
+    def _processing_texts(self, texts):
         """
         Divide the texts to words
         :param texts:
@@ -63,13 +85,13 @@ class Predictor:
             processed_docs_train.append(" ".join(tokens))
         return processed_docs_train
 
-    def fit_words_dict(self, processed_docs_train):
+    def _fit_words_dict(self, processed_docs_train):
         logging.info("Tokenizing input data...")
         tokenizer = MyTokenizer(num_words=MAX_NB_WORDS, lower=False, char_level=False)
         tokenizer.fit_on_texts(processed_docs_train)
         self.tokenizer = tokenizer
 
-    def tokenizer_words(self, processed_docs_train):
+    def _tokenizer_words(self, processed_docs_train):
         """
         Leverage tokenizer to map texts
         :param processed_docs_train: texts
@@ -94,18 +116,18 @@ class Predictor:
         """
 
         # process to word
-        texts = self.processing_texts(texts)
+        texts = self._processing_texts(texts)
 
         # Load or fit dict()
         if fit:
-            self.fit_words_dict(texts)
+            self._fit_words_dict(texts)
             self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\pwd.pkl")
         else:
             self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\pwd.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
         # words to vector
-        texts = self.tokenizer_words(texts)
+        texts = self._tokenizer_words(texts)
 
         # padding the cols to padding_len
         texts = sequence.pad_sequences(texts, maxlen=self.padding_len)
@@ -115,35 +137,63 @@ class Predictor:
         return texts, labels
 
 
-class FastTextPredictor(Predictor):
-    def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
-        super(FastTextPredictor, self).__init__(padding_len, class_num, debug)
-        self.embedding_dim = embedding_dim
+class HASHPredictor(Predictor):
+    def __init__(self, padding_len, class_num, debug=False):
+        super(HASHPredictor, self).__init__(padding_len, class_num, debug)
 
     def create_model(self):
-        """
-        create keras model
-        :return:
-        """
-        logging.info("Create Model...")
         model = Sequential()
-        model.add(Embedding(self.tokenizer.vocab_size(), self.embedding_dim, input_length=self.padding_len))
-        model.add(GlobalAveragePooling1D())
-        model.add(Dense(self.class_num, activation='sigmoid'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        model.summary()
+
+        model.add(Conv1D(4, 2, padding="same", activation="relu",
+                         input_shape=(16,1),
+                         name="conv1"))
+        model.add(Flatten())
+        model.add(Dense(256, activation="relu", name="fc1"))
+        model.add(Dense(self.class_num, activation="softmax", name="fc2"))
+
+        model.compile(loss="mean_squared_error",
+                      optimizer="Adam", metrics=["accuracy", "mse"])  # 配置
         self.model = model
 
+    def words2vec(self, texts, labels, hash="SHA256"):
 
-if __name__ == '__main__':
-    dataset = load_dataset('sst', 'default')
+        if not hash in ['MD5', 'SHA256']:
+            logging.error(f"This hash method not support -- {hash}")
+            raise ValueError(f"This hash method not support -- {hash}")
 
-    X = np.array(dataset.data['train'][0])
-    Y = np.array(dataset.data['train'][1]).round()
+        # process to hash
+        step = 0
+        base = 0
+        if hash == 'MD5':
+            texts = [hashlib.md5(str.encode(str(i))).digest() for i in texts]
+            # 8 bit as an int number
+            step = 1
+            # for normalize
+            base = 2 ** 8
+        elif hash == "SHA256":
+            texts = [hashlib.sha256(str.encode(str(i))).digest() for i in texts]
+            # 16 bit as an int number
+            step = 2
+            # for normalize
+            base = 2 ** 16
 
-    fastTextPredictor = FastTextPredictor(padding_len=128, class_num=2)
-    X, Y = fastTextPredictor.words2vec(X, Y, False)
-    train_data, valid_data = train_valid_split(X, Y)
+        # to vector
+        vectors = []
+        for text in tqdm(texts):
+            vector = np.zeros(16)
+            for index, i in enumerate(np.arange(len(text), step=step)):
+                vector[index] = int.from_bytes(text[i:i+step], byteorder=sys.byteorder)
+            vectors.append(vector)
 
-    fastTextPredictor.create_model()
-    fastTextPredictor.run(train_data, valid_data, epochs=25, batch_size=64)
+        # to numpy matrix
+        vectors = np.array(vectors) / base
+        logging.debug(f'Matrix shape : {vectors.shape}')
+        # trans label to label type
+        labels = to_categorical(labels)
+
+        return vectors, labels
+
+
+    @staticmethod
+    def data2NNform(X):
+        return X.reshape((X.shape[0], 16, 1))
