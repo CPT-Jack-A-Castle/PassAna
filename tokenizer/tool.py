@@ -9,6 +9,9 @@ class MyTokenizer(object):
     def __init__(self, **kwargs):
         self.tokenizer = Tokenizer(**kwargs)
 
+    def fit_on_seq(self, processed_docs_train):
+        return self.tokenizer.fit_on_sequences()
+
     def fit_on_texts(self, processed_docs_train):
         return self.tokenizer.fit_on_texts(processed_docs_train)
 
