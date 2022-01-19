@@ -3,6 +3,7 @@ import pickle
 import pandas as pd
 import numpy as np
 from keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
 
 from pwd.pwdClassifier import FastTextPwdClassifier, HASHPwdClassifier, NgramPwdClassifier
 from tokenizer.tool import train_valid_split
@@ -48,8 +49,10 @@ def randomHash():
 
 def pwdNgram():
 
-    X = np.load('./dataset/pwd&str.npy')
-    Y = np.load('./dataset/pwd&label.npy')
+    X = np.load('./dataset/pwd&str.npy', allow_pickle=True)
+    Y = np.load('./dataset/label.npy')
+
+    _, X, _, Y = train_test_split(X, Y, stratify=Y, test_size=0.01)
 
     ngramPwdClassifier = NgramPwdClassifier(padding_len=128, class_num=2)
     X, Y = ngramPwdClassifier.words2vec(X, Y, fit=False)
