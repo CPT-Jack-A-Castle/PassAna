@@ -40,11 +40,13 @@ class DataConfig extends TaintTracking::Configuration {
 
 
 
-from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
-where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode()
-select
-source.toString(),
-source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
-sink.getNode().toString() + ";" +
-sink.getNode().asExpr().(VarAccess).getParent().toString() + ";" +
-sink.getNode().getEnclosingCallable().toString()
+form Variable var
+where var.getType()
+// from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+// where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode()
+// select
+// source.toString(),
+// source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
+// sink.getNode().toString() + ";" +
+// sink.getNode().asExpr().(VarAccess).getParent().toString() + ";" +
+// sink.getNode().getEnclosingCallable().toString()
