@@ -8,6 +8,11 @@ import os
 import csv
 import pandas as pd
 
+import http.client
+import json
+
+from urllib3 import response
+
 
 class Analyzer(object):
 
@@ -18,6 +23,8 @@ class Analyzer(object):
         self._ql_task = None
         # Language Type
         self.language_type = None
+        # default cmd
+        self.cmd = 'cmd'
 
         if debug:
             logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
@@ -25,6 +32,9 @@ class Analyzer(object):
         else:
             logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
                                 level=logging.INFO)
+
+    def set_cmd(self, cmd):
+        self.cmd = cmd
 
     def analyze_create(self, src, external_cmd=None):
         """
@@ -76,7 +86,7 @@ class Analyzer(object):
 
         # analyze ql command
         cmd = f"codeql database analyze  " \
-              f"{src}/{self.language_type}_database ql/{self.language_type}/cmd.ql " \
+              f"{src}/{self.language_type}_database ql/{self.language_type}/{self.cmd}.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
         self._ql_task = pexpect.spawn(cmd, timeout=3600)
@@ -96,7 +106,7 @@ class Analyzer(object):
         :param src:
         :return: result
         """
-        path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
+        path = f"{src}/{self.language_type}_database/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"
         # analyze ql command
         cmd = f"codeql bqrs decode --format=json --output={src}/out.json {path}"
         os.system(cmd)
@@ -112,7 +122,7 @@ class Analyzer(object):
         :return: result
         """
         path = f"{src}/{self.language_type}_database/results/" \
-               f"getting-started/codeql-extra-queries-{self.language_type}/cmd.bqrs"
+               f"getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"
         # analyze ql command
         cmd = f"codeql bqrs decode --format=csv --output={src}/out.csv {path}"
         os.system(cmd)
@@ -188,7 +198,6 @@ class Analyzer(object):
             context[variable_name] = variable_context
         return context
 
-
 def process_text(text):
     variable_context = text.replace('(...)', '')
     variable_context = variable_context.replace('...', '')
@@ -215,6 +224,7 @@ class PythonAnalyzer(Analyzer):
     def __init__(self, debug):
         super(PythonAnalyzer, self).__init__(debug)
         self.language_type = "python"
+
 
 
 
