@@ -67,10 +67,10 @@ class RemoteAnalyzer(object):
         return data['id']
 
     def download_dataset(self, filename: str, language, path: str):
-        project_id = self.get_project('lerry903/RuoYi')
+        project_id = self.get_project(filename)
         name = filename.split('/')[1]
         self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
 
 if __name__ == '__main__':
     remote = RemoteAnalyzer()
-    remote.download_dataset('lerry903/RuoYi', 'java', '.')
+    remote.download_dataset('linkedin/shaky-android', 'java', '/home/rain/program')

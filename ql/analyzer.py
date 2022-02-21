@@ -100,6 +100,29 @@ class Analyzer(object):
                 logging.error(f'A fatal error')
                 break
 
+    def ql_analyze_zip(self, src, threads=1):
+        """
+        Run Ql file to analyze the database.zip
+        :param src: file path
+        :param threads: thread for running (default=1)
+        """
+
+        # analyze ql command
+        cmd = f"codeql database analyze  " \
+              f"{src}/{self.language_type}_database ql/{self.language_type}/{self.cmd}.ql " \
+              f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
+
+        self._ql_task = pexpect.spawn(cmd, timeout=3600)
+        while True:
+            line = self._ql_task.readline().decode()
+            logging.debug(line)
+            if line.startswith('Interpreting results'):
+                logging.info(f'Interpreting results')
+                break
+            if line.startswith('A fatal error'):
+                logging.error(f'A fatal error')
+                break
+
     def decode_bqrs2json(self, src):
         """
         Decode the .bqrs file to json
