@@ -67,6 +67,13 @@ class RemoteAnalyzer(object):
         return data['id']
 
     def download_dataset(self, filename: str, language, path: str):
+        """
+        download dataset (zip file) from LGTM
+        :param filename: project name like 'linkedin/shaky-android'
+        :param language: language that want to get
+        :param path: save path
+        :return:
+        """
         project_id = self.get_project(filename)
         name = filename.split('/')[1]
         self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
