@@ -78,6 +78,22 @@ class RemoteAnalyzer(object):
         name = filename.split('/')[1]
         self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
 
+
+    def download_dataset(self, filename: str, language, path: str):
+        if os.path.exists('{path}/{name}_{language}.zip'):
+            print(f'Skip{filename}')
+            return
+        project_id = self.get_project(filename)
+        name = filename.split('/')[1]
+        self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
+
 if __name__ == '__main__':
     remote = RemoteAnalyzer()
-    remote.download_dataset('linkedin/shaky-android', 'java', '/home/rain/program')
+    for line in open('java_repos_name.txt', 'r'):
+        repo_name = line.replace('\n', '')
+        # print(repo_name)
+        try:
+            remote.download_dataset(repo_name, 'java', 'E:\program\java_proj')
+        except:
+            print('analyzer "{}" not found!'.format(repo_name))
+        time.sleep(1)
