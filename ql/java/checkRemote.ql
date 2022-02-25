@@ -27,11 +27,11 @@ class DataConfig extends TaintTracking::Configuration {
   }
 
   override predicate isSource(DataFlow::Node source) {
-    source instanceof RemoteFlowSource
+    source instanceof GetString
   }
 
   override predicate isSink(DataFlow::Node sink) {
-    sink instanceof GetString
+    sink instanceof RemoteFlowSource
  }
 }
 
