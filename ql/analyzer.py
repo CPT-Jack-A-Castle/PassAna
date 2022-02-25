@@ -11,6 +11,7 @@ import pandas as pd
 import http.client
 import json
 
+from tqdm import tqdm
 from urllib3 import response
 
 
@@ -34,6 +35,9 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def set_cmd(self, cmd):
+        if cmd not in ['cmd', 'findString', 'checkRemote']:
+            logging.error(f'Not support {cmd}!')
+            return
         self.cmd = cmd
 
     def analyze_create(self, src, external_cmd=None):
@@ -69,7 +73,7 @@ class Analyzer(object):
                 break
         return True
 
-    def ql_analyze(self, src, threads=1):
+    def ql_analyze(self, src, skip=False, threads=1):
         """
         Run Ql file to analyze the database
         :param src: file path
@@ -77,39 +81,20 @@ class Analyzer(object):
         """
 
         # Check the file has been analyzed
-        if os.path.exists(f"{src}/{self.language_type}_database "):
-            if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
+        if os.path.exists(f"{src}/results"):
+            if os.path.exists(f"{src}/results"):
                 return
             else:
                 logging.error('Src have no src.zip')
                 raise ValueError('Analyze src at first!')
 
-        # analyze ql command
-        cmd = f"codeql database analyze  " \
-              f"{src}/{self.language_type}_database ql/{self.language_type}/{self.cmd}.ql " \
-              f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
-
-        self._ql_task = pexpect.spawn(cmd, timeout=3600)
-        while True:
-            line = self._ql_task.readline().decode()
-            logging.debug(line)
-            if line.startswith('Interpreting results'):
-                logging.info(f'Interpreting results')
-                break
-            if line.startswith('A fatal error'):
-                logging.error(f'A fatal error')
-                break
-
-    def ql_analyze_zip(self, src, threads=1):
-        """
-        Run Ql file to analyze the database.zip
-        :param src: file path
-        :param threads: thread for running (default=1)
-        """
+        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
+            logging.info(f'{src} has been analyzed.')
+            return
 
         # analyze ql command
         cmd = f"codeql database analyze  " \
-              f"{src}/{self.language_type}_database ql/{self.language_type}/{self.cmd}.ql " \
+              f"{src} ql/{self.language_type}/{self.cmd}.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
         self._ql_task = pexpect.spawn(cmd, timeout=3600)
@@ -150,56 +135,6 @@ class Analyzer(object):
         cmd = f"codeql bqrs decode --format=csv --output={src}/out.csv {path}"
         os.system(cmd)
 
-    def detect_dataflow_of_str(self, src, threads=1):
-        # Check the file has been analyzed
-        if os.path.exists(f"{src}/{self.language_type}_database "):
-            if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
-                return
-            else:
-                logging.error('Src have no src.zip')
-                raise ValueError('Analyze src at first!')
-
-        # analyze ql command
-        cmd = f"codeql database analyze  " \
-              f"{src}/{self.language_type}_database ql/{self.language_type}/str.ql " \
-              f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
-
-        self._ql_task = pexpect.spawn(cmd, timeout=3600)
-        while True:
-            line = self._ql_task.readline().decode()
-            logging.debug(line)
-            if line.startswith('Interpreting results'):
-                logging.info(f'Interpreting results')
-                break
-            if line.startswith('A fatal error'):
-                logging.error(f'A fatal error')
-                break
-
-    def detect_net_function(self, src, threads=1):
-        # Check the file has been analyzed
-        if os.path.exists(f"{src}/{self.language_type}_database "):
-            if os.path.exists(f"{src}/{self.language_type}_database/src.zip"):
-                return
-            else:
-                logging.error('Src have no src.zip')
-                raise ValueError('Analyze src at first!')
-
-        # analyze ql command
-        cmd = f"codeql database analyze  " \
-              f"{src}/{self.language_type}_database ql/{self.language_type}/str.ql " \
-              f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
-
-        self._ql_task = pexpect.spawn(cmd, timeout=3600)
-        while True:
-            line = self._ql_task.readline().decode()
-            logging.debug(line)
-            if line.startswith('Interpreting results'):
-                logging.info(f'Interpreting results')
-                break
-            if line.startswith('A fatal error'):
-                logging.error(f'A fatal error')
-                break
-
     @staticmethod
     def load_project_csv(src):
         out = pd.read_csv(f'{src}/out.csv')
@@ -221,12 +156,30 @@ class Analyzer(object):
             context[variable_name] = variable_context
         return context
 
+
 def process_text(text):
     variable_context = text.replace('(...)', '')
     variable_context = variable_context.replace('...', '')
     variable_context = variable_context.replace('=', '')
     return variable_context
 
+
+def process_all_dataset(base_path, skip=True, threads=4):
+    analyzer = Analyzer(True)
+    analyzer.set_cmd('findString')
+    for proj_dir in tqdm(os.listdir(base_path)):
+        analyzer.ql_analyze(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+        analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
+
+
+def merge_data(base_path):
+    analyzer = Analyzer(True)
+    analyzer.set_cmd('findString')
+    out = pd.DataFrame(columns=['var','col1','col2', 'col3'])
+    for proj_dir in tqdm(os.listdir(base_path)):
+        data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}')
+        out = out.append(data)
+    return out
 
 class JavaAnalyzer(Analyzer):
 
