@@ -105,7 +105,7 @@ class Analyzer(object):
                 logging.error(f'Error: Can only run queries')
                 return False
 
-    def ql_str_context(self, src, skip=False, threads=4):
+    def ql_str_context(self, src, skip=False, threads=8):
         """
         run ql analyze to find string context flow
         :param src:
@@ -218,7 +218,7 @@ def process_text(text):
     return variable_context
 
 
-def analyze_str(base_path, cmd, skip=True, threads=4):
+def analyze_str(base_path, cmd, skip=True, threads=8):
     """
     run ql for all dataset
     :param base_path: dir path
@@ -285,8 +285,7 @@ def analyze_str_context(base_path, str_path, language_type, debug=False):
     decode_bqrs_all(base_path, 'context_from')
     context_to = merge_data(base_path, cmd='context_to')
     context_from = merge_data(base_path, cmd='context_from')
-    context_to.to_csv(f'{base_path}/context_to.csv')
-    context_from.to_csv(f'{base_path}/context_from.csv')
+    return context_to, context_from
 
 
 class JavaAnalyzer(Analyzer):
