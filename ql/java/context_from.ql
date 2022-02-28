@@ -14,9 +14,7 @@ import semmle.code.java.security.Encryption
 class GetPass extends DataFlow::ExprNode{
     GetPass(){
         exists(Variable var| var = this.asExpr().(VarAccess).getVariable()|
-        var.getName().regexpMatch("\\w*[Pp]ass\\w*") or
-        var.getName().regexpMatch("\\w*token\\w*")  or
-        var.getName().regexpMatch("\\w*Token\\w*")
+        var.getName() in ["REQUEST_PARAM_COMMENT"]
         )
     }
 }
@@ -31,22 +29,18 @@ class GetRegularNode extends DataFlow::ExprNode{
 class DataConfig extends TaintTracking::Configuration {
     DataConfig() { this = "<some unique identifier>" }
     override predicate isSource(DataFlow::Node nd) {
-       nd instanceof GetPass
+       nd instanceof GetRegularNode GetPass
     }
     override predicate isSink(DataFlow::Node nd) {
-        nd instanceof GetRegularNode}
+        nd instanceof GetPass}
 
 }
 
-
-
-form Variable var
-where var.getType()
-// from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
-// where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode()
-// select
-// source.toString(),
-// source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
-// sink.getNode().toString() + ";" +
-// sink.getNode().asExpr().(VarAccess).getParent().toString() + ";" +
-// sink.getNode().getEnclosingCallable().toString()
+from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode()
+select
+sink.toString(),
+sink.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
+source.getNode().toString() + ";" +
+source.getNode().asExpr().(VarAccess).getParent().toString() + ";" +
+source.getNode().getEnclosingCallable().toString()

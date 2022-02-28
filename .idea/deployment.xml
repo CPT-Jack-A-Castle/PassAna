@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="rain@10.0.0.151:22">
+  <component name="PublishConfigData" autoUpload="Always" serverName="rain@10.0.0.151:22" exclude=".svn;.cvs;.idea;.DS_Store;.git;.hg;*.hprof;*.pycnpy" showAutoUploadSettingsWarning="false">
     <serverData>
+      <paths name="Ubuntu20">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/home/rain/PassAna" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="rain@10.0.0.151:22">
         <serverdata>
           <mappings>
             <mapping deploy="/home/rain/PassAna" local="$PROJECT_DIR$" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="rain@10.0.0.55:22">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>

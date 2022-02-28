@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="c0e0d235-bdaf-4df1-9d2c-ce464ebc991f" name="Ubuntu20">
+        <fileTransfer accessType="SFTP" sshConfigId="64ec5dce-f198-421f-8c56-4f6ea2527c44" sshConfig="rain@10.0.0.151:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
