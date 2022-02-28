@@ -29,11 +29,11 @@ class GetRegularNode extends DataFlow::ExprNode{
 class DataConfig extends TaintTracking::Configuration {
     DataConfig() { this = "<some unique identifier>" }
     override predicate isSource(DataFlow::Node nd) {
-       nd instanceof GetRegularNode GetPass
+       nd instanceof GetRegularNode
     }
     override predicate isSink(DataFlow::Node nd) {
-        nd instanceof GetPass}
-
+        nd instanceof GetPass
+    }
 }
 
 from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink

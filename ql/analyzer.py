@@ -36,12 +36,12 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def set_cmd(self, cmd):
-        if cmd not in ['context', 'findString', 'checkRemote']:
+        if cmd not in ['context_from', 'context_to', 'findString', 'checkRemote']:
             logging.error(f'Not support {cmd}!')
             return
         self.cmd = cmd
 
-    def analyze_create(self, src, external_cmd=None):
+    def database_create(self, src, external_cmd=None):
         """
         Create database for a project
         :param src: file path
@@ -74,34 +74,38 @@ class Analyzer(object):
                 break
         return True
 
-    def ql_find_str(self, src, skip=False, threads=1):
+    def ql_find_str(self, src, skip=False, threads=4):
         """
         Run Ql file to analyze the database
+        :param skip:
         :param src: file path
         :param threads: thread for running (default=1)
         """
 
-        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/findString.bqrs"):
-            logging.info(f'{src} has been analyzed.')
-            return
+        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
+            logging.info(f' It has been analyzed.')
+            return False
 
         # analyze ql command
         cmd = f"codeql database analyze  " \
               f"{src} ql/{self.language_type}/findString.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
-        self._ql_task = pexpect.spawn(cmd, timeout=3600)
+        self._ql_task = pexpect.spawn(cmd, timeout=300)
         while True:
             line = self._ql_task.readline().decode()
             logging.debug(line)
             if line.startswith('Interpreting results'):
                 logging.info(f'Interpreting results')
-                break
+                return True
             if line.startswith('A fatal error'):
                 logging.error(f'A fatal error')
-                break
+                return False
+            if line.startswith('Error: Can only run queries'):
+                logging.error(f'Error: Can only run queries')
+                return False
 
-    def ql_string_context(self, src, skip=False, threads=1):
+    def ql_str_context(self, src, skip=False, threads=4):
         """
         run ql analyze to find string context flow
         :param src:
@@ -109,14 +113,14 @@ class Analyzer(object):
         :param threads:
         :return:
         """
-        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/context.bqrs"):
+        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
             logging.info(f'{src} has been analyzed.')
-            return
+            return False
 
         # analyze ql command
         cmd = f"codeql database analyze  " \
-              f"{src} ql/{self.language_type}/context.ql " \
-              f"--format=csv --output={src}/context.csv --rerun --threads {threads}"
+              f"{src} ql/{self.language_type}/{self.cmd}.ql " \
+              f"--format=csv --output={src}/{self.cmd}.csv --rerun --threads {threads}"
 
         # handler running
         self._ql_task = pexpect.spawn(cmd, timeout=3600)
@@ -125,10 +129,10 @@ class Analyzer(object):
             logging.debug(line)
             if line.startswith('Interpreting results'):
                 logging.info(f'Interpreting results')
-                break
+                return True
             if line.startswith('A fatal error'):
                 logging.error(f'A fatal error')
-                break
+                return False
 
     def specific_str_context_array(self, proj_path: str, source_path: str):
         csv_data = pandas.read_csv(source_path, index_col=0)
@@ -141,7 +145,7 @@ class Analyzer(object):
     def specific_str_context(self, proj_path: str, group: str, group_item: list):
         complete_path = proj_path + '/' + group
         # read
-        with open(f'ql/{self.language_type}/context.ql', 'r') as f:
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
             lines = f.readlines()
             ql_code = lines[16]
 
@@ -150,10 +154,10 @@ class Analyzer(object):
         lines[16] = new_line
 
         # replace
-        with open(f'ql/{self.language_type}/context.ql', 'w') as f:
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
             f.writelines(lines)
 
-        self.ql_string_context(complete_path)
+        self.ql_str_context(complete_path)
 
     def decode_bqrs2json(self, src):
         """
@@ -178,13 +182,16 @@ class Analyzer(object):
         """
         path = f"{src}/results/" \
                f"getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"
+        if not os.path.exists(path):
+            return
+
         # analyze ql command
         cmd = f"codeql bqrs decode --format=csv --output={src}/{self.cmd}.csv {path}"
         os.system(cmd)
 
     @staticmethod
-    def load_project_csv(src, type):
-        out = pd.read_csv(f'{src}/{type}.csv')
+    def load_project_csv(src, cmd):
+        out = pd.read_csv(f'{src}/{cmd}.csv')
         return out
 
     @staticmethod
@@ -211,7 +218,7 @@ def process_text(text):
     return variable_context
 
 
-def process_all_dataset(base_path, cmd, skip=True, threads=4):
+def analyze_str(base_path, cmd, skip=True, threads=4):
     """
     run ql for all dataset
     :param base_path: dir path
@@ -221,24 +228,65 @@ def process_all_dataset(base_path, cmd, skip=True, threads=4):
     """
     analyzer = JavaAnalyzer(False)
     analyzer.set_cmd(cmd)
+    dirs = tqdm(os.listdir(base_path))
+
+    for proj_dir in dirs:
+        dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
+
+        result = analyzer.ql_find_str(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+        if result:
+            analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
+
+
+def decode_bqrs_all(base_path, cmd):
+    analyzer = JavaAnalyzer(False)
+    analyzer.set_cmd(cmd)
     for proj_dir in tqdm(os.listdir(base_path)):
-        analyzer.ql_find_str(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
         analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
 
 def merge_data(base_path, cmd):
     analyzer = JavaAnalyzer(True)
     analyzer.set_cmd('findString')
-    out = pd.DataFrame(columns=['var','col1','col2', 'col3'])
-    for proj_dir in tqdm(os.listdir(base_path)):
+    out = None
+    first = True
+    dirs = tqdm(os.listdir(base_path))
+    for proj_dir in dirs:
         if not os.path.exists(f'{base_path}/{proj_dir}/{cmd}.csv'):
             continue
-        data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}')
+        data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
         # add project name
         data['project'] = proj_dir
 
-        out = out.append(data, ignore_index=True)
+        if first:
+            out = data
+            first = False
+        else:
+            out = pd.concat([out, data], ignore_index=True)
     return out
+
+
+def analyze_str_context(base_path, str_path, language_type, debug=False):
+    ana:Analyzer = None
+    if language_type == 'java':
+        ana = JavaAnalyzer(debug)
+    if language_type == 'cpp':
+        ana = CppAnalyzer(debug)
+    if language_type == 'python':
+        ana = PythonAnalyzer(debug)
+
+    ana.set_cmd('context_to')
+    ana.specific_str_context_array(base_path, str_path)
+
+    ana.set_cmd('context_from')
+    ana.specific_str_context_array(base_path, str_path)
+
+    decode_bqrs_all(base_path, 'context_to')
+    decode_bqrs_all(base_path, 'context_from')
+    context_to = merge_data(base_path, cmd='context_to')
+    context_from = merge_data(base_path, cmd='context_from')
+    context_to.to_csv(f'{base_path}/context_to.csv')
+    context_from.to_csv(f'{base_path}/context_from.csv')
 
 
 class JavaAnalyzer(Analyzer):
