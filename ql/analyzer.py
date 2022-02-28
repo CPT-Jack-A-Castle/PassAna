@@ -68,10 +68,10 @@ class Analyzer(object):
             logging.debug(line)
             if line.startswith('Successfully created database'):
                 logging.info(f'Successfully created database')
-                break
+                return False
             if line.startswith('A fatal error'):
                 logging.error(f'A fatal error')
-                break
+                return False
         return True
 
     def ql_find_str(self, src, skip=False, threads=4):
@@ -108,8 +108,8 @@ class Analyzer(object):
     def ql_str_context(self, src, skip=False, threads=8):
         """
         run ql analyze to find string context flow
-        :param src:
-        :param skip:
+        :param src: database path
+        :param skip: skip if bqrs is exited
         :param threads:
         :return:
         """
@@ -134,21 +134,35 @@ class Analyzer(object):
                 logging.error(f'A fatal error')
                 return False
 
-    def specific_str_context_array(self, proj_path: str, source_path: str):
+    def specific_str_context_array(self, projs_path: str, source_path: str):
+        """
+        find flow context according to csv file (multiple item)
+        :param projs_path: projects path
+        :param source_path: string csv file
+        :return:
+        """
         csv_data = pandas.read_csv(source_path, index_col=0)
         # group by project
         csv_data_by_group = csv_data.groupby('project')
 
         for group, group_item in tqdm(csv_data_by_group):
-            self.specific_str_context(proj_path, group, group_item['var'].tolist())
+            self.specific_str_context(projs_path, group, group_item['var'].tolist())
 
     def specific_str_context(self, proj_path: str, group: str, group_item: list):
+        """
+        ind flow context
+        :param proj_path: projs_path: projects path
+        :param group: specific project
+        :param group_item: all string of specific project
+        :return:
+        """
         complete_path = proj_path + '/' + group
         # read
         with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
             lines = f.readlines()
             ql_code = lines[16]
 
+        # read the ql file to change the pattern that we want to match
         str_array = re.findall('\[.*\]',ql_code)[0]
         new_line = ql_code.replace(str_array, str(group_item).replace("'", '"'))
         lines[16] = new_line
@@ -239,13 +253,25 @@ def analyze_str(base_path, cmd, skip=True, threads=8):
 
 
 def decode_bqrs_all(base_path, cmd):
+    """
+    decode all bqrs in $base_path$
+    :param base_path: path
+    :param cmd:  kinds of ql command you want to decode e.g., result of [findString, findPass]
+    :return:
+    """
     analyzer = JavaAnalyzer(False)
     analyzer.set_cmd(cmd)
     for proj_dir in tqdm(os.listdir(base_path)):
         analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
 
-def merge_data(base_path, cmd):
+def merge_csv(base_path, cmd):
+    """
+    merge all csv file in $project-home$
+    :param base_path:
+    :param cmd: kinds of ql command you want to decode e.g., result of [findString, findPass]
+    :return:
+    """
     analyzer = JavaAnalyzer(True)
     analyzer.set_cmd('findString')
     out = None
@@ -283,8 +309,8 @@ def analyze_str_context(base_path, str_path, language_type, debug=False):
 
     decode_bqrs_all(base_path, 'context_to')
     decode_bqrs_all(base_path, 'context_from')
-    context_to = merge_data(base_path, cmd='context_to')
-    context_from = merge_data(base_path, cmd='context_from')
+    context_to = merge_csv(base_path, cmd='context_to')
+    context_from = merge_csv(base_path, cmd='context_from')
     return context_to, context_from
 
 
