@@ -74,7 +74,7 @@ class Analyzer(object):
                 return False
         return True
 
-    def ql_find_str(self, src, skip=False, threads=4):
+    def ql_find_str(self, src, skip=False, threads=8):
         """
         Run Ql file to analyze the database
         :param skip:
@@ -88,7 +88,7 @@ class Analyzer(object):
 
         # analyze ql command
         cmd = f"codeql database analyze  " \
-              f"{src} ql/{self.language_type}/findString.ql " \
+              f"{src} ql/{self.language_type}/{self.cmd}.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
         self._ql_task = pexpect.spawn(cmd, timeout=300)
