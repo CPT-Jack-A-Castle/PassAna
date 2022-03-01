@@ -77,13 +77,4 @@ class RemoteAnalyzer(object):
         self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
 
 
-if __name__ == '__main__':
-    remote = RemoteAnalyzer()
-    for line in open('java_repos_name.txt', 'r'):
-        repo_name = line.replace('\n', '')
-        # print(repo_name)
-        try:
-            remote.download_dataset(repo_name, 'java', 'E:\program\java_proj')
-        except:
-            print('analyzer "{}" not found!'.format(repo_name))
-        time.sleep(1)
+

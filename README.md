@@ -10,6 +10,16 @@
 在`$project-home$`目录下使用 `for z in *.zip; do unzip $z; done` 直接解压所有zip文件，
 注意只要保证解压出的文件不含有二级目录即可，也可用其他方法解压。
 
+## 结构说明
+`context`: 上下文分类器
+
+`pwd`: password识别分类器
+
+`ql`: 所有的分析QL语句和分析方法
+
+`tokenizer`: NLP tokenizer模型
+
+
 ## 运行说明
 
 `1.anaPass`: 查找所有的与password有关的string，输出为`pass.csv`

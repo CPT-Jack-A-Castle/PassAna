@@ -36,7 +36,7 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def set_cmd(self, cmd):
-        if cmd not in ['context_from', 'context_to', 'findString', 'findPass','checkRemote']:
+        if cmd not in ['context_from', 'context_to', 'findString', 'findPass', 'checkRemote']:
             logging.error(f'Not support {cmd}!')
             return
         self.cmd = cmd
