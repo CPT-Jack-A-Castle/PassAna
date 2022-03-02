@@ -20,7 +20,7 @@ class RemoteAnalyzer(object):
     def __init__(self, bearer='940af9ba7bd1e65d943a80bf40ab6b25808e715cfdf314cb8dc14c561567ff81'):
         self.bearer = bearer
 
-    def get_download(self, project_id, language, file_path):
+    def get_download(self, project_id, language, file_path, threshold=None):
         try:
             headers = {
                 "Authorization": f"Bearer {self.bearer}"}
@@ -28,6 +28,12 @@ class RemoteAnalyzer(object):
             url = f'https://lgtm.com/api/v1.0/snapshots/{project_id}/{language}'
 
             file_size = int(urlopen(url).info().get('Content-Length', -1))
+
+            # return if the size over the threshold
+            mb_size = file_size / (1024 * 1024)
+            if threshold is not None:
+                if mb_size > threshold:
+                    return
 
             if os.path.exists(file_path):
                 first_byte = os.path.getsize(file_path)  # (3)
@@ -66,7 +72,7 @@ class RemoteAnalyzer(object):
 
         return data['id']
 
-    def download_dataset(self, filename: str, language, path: str):
+    def download_dataset(self, filename: str, language, path: str, threshold=None):
         name = filename.split('/')[1]
 
         if os.path.exists(f'{path}/{name}_{language}.zip'):
@@ -74,7 +80,7 @@ class RemoteAnalyzer(object):
             return
 
         project_id = self.get_project(filename)
-        self.get_download(project_id, language, f'{path}/{name}_{language}.zip')
+        self.get_download(project_id, language, f'{path}/{name}_{language}.zip', threshold)
 
 
 
