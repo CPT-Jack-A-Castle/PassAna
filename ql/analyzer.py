@@ -232,15 +232,23 @@ def process_text(text):
     return variable_context
 
 
-def analyze_str(base_path, cmd, skip=True, threads=8):
+def analyze_str(base_path, cmd, language, skip=True, threads=8):
     """
     run ql for all dataset
     :param base_path: dir path
+    :param cmd:
+    :param language:
     :param skip: skip if the dataset had been analyzed
     :param threads:
     :return:
     """
-    analyzer = JavaAnalyzer(False)
+
+    if language == "java":
+        analyzer = JavaAnalyzer(False)
+    elif language == "python":
+        analyzer = PythonAnalyzer(False)
+    else:
+        analyzer = CppAnalyzer(False)
     analyzer.set_cmd(cmd)
     dirs = tqdm(os.listdir(base_path))
 
@@ -252,27 +260,40 @@ def analyze_str(base_path, cmd, skip=True, threads=8):
             analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
 
-def decode_bqrs_all(base_path, cmd):
+def decode_bqrs_all(base_path, cmd, language):
     """
     decode all bqrs in $base_path$
     :param base_path: path
     :param cmd:  kinds of ql command you want to decode e.g., result of [findString, findPass]
+    :param language:
     :return:
     """
-    analyzer = JavaAnalyzer(False)
+
+    if language == "java":
+        analyzer = JavaAnalyzer(False)
+    elif language == "python":
+        analyzer = PythonAnalyzer(False)
+    else:
+        analyzer = CppAnalyzer(False)
     analyzer.set_cmd(cmd)
     for proj_dir in tqdm(os.listdir(base_path)):
         analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
 
-def merge_csv(base_path, cmd):
+def merge_csv(base_path, cmd, language):
     """
     merge all csv file in $project-home$
     :param base_path:
     :param cmd: kinds of ql command you want to decode e.g., result of [findString, findPass]
+    :param language:
     :return:
     """
-    analyzer = JavaAnalyzer(True)
+    if language == "java":
+        analyzer = JavaAnalyzer(False)
+    elif language == "python":
+        analyzer = PythonAnalyzer(False)
+    else:
+        analyzer = CppAnalyzer(False)
     analyzer.set_cmd('findString')
     out = None
     first = True
