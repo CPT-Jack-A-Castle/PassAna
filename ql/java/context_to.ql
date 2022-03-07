@@ -13,16 +13,17 @@ import semmle.code.java.security.Encryption
 
 class GetPass extends DataFlow::ExprNode{
     GetPass(){
-        exists(Variable var| var = this.asExpr().(VarAccess).getVariable()|
-        var.getName() in ["REQUEST_PARAM_COMMENT"]
+        exists(Variable var, string location, string text|
+            var = this.asExpr().(VarAccess).getVariable() and location = var.getLocation().toString() and text = var.getName().toString() |
+            (text+location) in
+            ["dcatfile:///opt/src/dcatap/src/main/java/org/n52/helgoland/adapters/dcat/CatalogTransformer.java:118:33:118:43"]
         )
     }
 }
 
-class GetRegularNode extends DataFlow::ExprNode{
-    GetRegularNode(){
-        exists(Variable var|
-             var = this.asExpr().(VarAccess).getVariable())
+class RegularNode extends DataFlow::ExprNode{
+    RegularNode(){
+        this.asExpr() instanceof VarAccess
     }
 }
 
@@ -32,15 +33,17 @@ class DataConfig extends TaintTracking::Configuration {
        nd instanceof GetPass
     }
     override predicate isSink(DataFlow::Node nd) {
-        nd instanceof GetRegularNode}
+        nd instanceof RegularNode
+    }
 
 }
 
-from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
-where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode()
+// from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
+// where cfg.hasFlowPath(source, sink)
+// select source, sink
+from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink, string str
+where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode() and str = sink.getNode().asExpr().(StringLiteral).getValue()
 select
 source.toString(),
-source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString() + source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().getStartLine(),
-sink.getNode().toString() + ";" +
-sink.getNode().asExpr().(VarAccess).getParent().toString() + ";" +
-sink.getNode().getEnclosingCallable().toString()
+source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation(),
+str, sink.getNode().asExpr().getEnclosingCallable().getName()

@@ -3,6 +3,8 @@ import logging
 import json
 import string
 import re
+
+import numpy as np
 import pandas
 import pexpect
 import os
@@ -146,32 +148,10 @@ class Analyzer(object):
         csv_data_by_group = csv_data.groupby('project')
 
         for group, group_item in tqdm(csv_data_by_group):
-            self.specific_str_context(projs_path, group, group_item['var'].tolist())
+            self.specific_str_context(projs_path, group, (group_item['col1'] + group_item['col3']).tolist())
 
     def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        """
-        ind flow context
-        :param proj_path: projs_path: projects path
-        :param group: specific project
-        :param group_item: all string of specific project
-        :return:
-        """
-        complete_path = proj_path + '/' + group
-        # read
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
-            lines = f.readlines()
-            ql_code = lines[16]
-
-        # read the ql file to change the pattern that we want to match
-        str_array = re.findall('\[.*\]',ql_code)[0]
-        new_line = ql_code.replace(str_array, str(group_item).replace("'", '"'))
-        lines[16] = new_line
-
-        # replace
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
-            f.writelines(lines)
-
-        self.ql_str_context(complete_path)
+        pass
 
     def decode_bqrs2json(self, src):
         """
@@ -310,6 +290,15 @@ def merge_csv(base_path, cmd, language):
             first = False
         else:
             out = pd.concat([out, data], ignore_index=True)
+
+    # drop nan
+    out = out.dropna()
+
+    if language == "java":
+        out = out[out['col1'].str.contains('"')]
+        out = out[out['col1'].str.len() >= 6]
+        out['col1'] = out['col1'].str.replace('"','')
+
     return out
 
 
@@ -325,14 +314,9 @@ def analyze_str_context(base_path, str_path, language_type, debug=False):
     ana.set_cmd('context_to')
     ana.specific_str_context_array(base_path, str_path)
 
-    ana.set_cmd('context_from')
-    ana.specific_str_context_array(base_path, str_path)
-
-    decode_bqrs_all(base_path, 'context_to')
-    decode_bqrs_all(base_path, 'context_from')
-    context_to = merge_csv(base_path, cmd='context_to')
-    context_from = merge_csv(base_path, cmd='context_from')
-    return context_to, context_from
+    decode_bqrs_all(base_path, 'context_to', language_type)
+    context_to = merge_csv(base_path, cmd='context_to', language=language_type)
+    return context_to
 
 
 class JavaAnalyzer(Analyzer):
@@ -340,6 +324,31 @@ class JavaAnalyzer(Analyzer):
     def __init__(self, debug):
         super(JavaAnalyzer, self).__init__(debug)
         self.language_type = "java"
+
+    def specific_str_context(self, proj_path: str, group: str, group_item: list):
+        """
+        ind flow context
+        :param proj_path: projs_path: projects path
+        :param group: specific project
+        :param group_item: all string of specific project
+        :return:
+        """
+        complete_path = proj_path + '/' + group
+        # read
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
+            lines = f.readlines()
+            ql_code = lines[18]
+
+        # read the ql file to change the pattern that we want to match
+        str_array = re.findall('\[.*\]',ql_code)[0]
+        new_line = ql_code.replace(str_array, str(group_item))
+        lines[18] = new_line
+
+        # replace
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
+            f.writelines(lines)
+
+        self.ql_str_context(complete_path)
 
 
 class CppAnalyzer(Analyzer):

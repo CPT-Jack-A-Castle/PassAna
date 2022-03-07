@@ -24,4 +24,4 @@ where var.getType() instanceof  TypeString and
       contentstr.regexpMatch("\\w*com\\w*")
 	)
 
-select var, var.getInitializer(), var.getLocation().getStartLine(), var.getLocation()
+select var.getName().toString(), var.getInitializer().toString(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation().toString()

@@ -10,4 +10,4 @@ import java
 from Variable var
 where var.getType() instanceof  TypeString
 
-select var, var.getInitializer(), var.getLocation().getStartLine(), var.getLocation()
+select var.getName().toString(), var.getInitializer().toString(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation().toString()
