@@ -19,7 +19,6 @@ where var.getType() instanceof  TypeString and
       namestr.regexpMatch("\\w*auth\\w*") or
       namestr.regexpMatch("\\w*host\\w*") or
       namestr.regexpMatch("\\w*server\\w*") or
-      namestr.regexpMatch("\\w*ip\\w*") or
 	  namestr.regexpMatch("\\w*username\\w*") or
       namestr.regexpMatch("\\w*account\\w*") or
       contentstr.regexpMatch("\\w*com\\w*")
