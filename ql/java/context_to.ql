@@ -14,16 +14,17 @@ import semmle.code.java.security.Encryption
 class GetPass extends DataFlow::ExprNode{
     GetPass(){
         exists(Variable var, string location, string text|
-            var = this.asExpr().(VarAccess).getVariable() and location = var.getLocation().toString() and text = var.getName().toString() |
+            var = this.asExpr().(VarAccess).getVariable() and location = var.getInitializer().getLocation().toString() and text = var.getName().toString() |
             (text+location) in
-            ["dcatfile:///opt/src/dcatap/src/main/java/org/n52/helgoland/adapters/dcat/CatalogTransformer.java:118:33:118:43"]
+            ["SYSTEM_ACCOUNTfile:///opt/src/src/main/java/io/github/jhipster/sample/config/Constants.java:22:49:22:56", "ERR_INTERNAL_SERVER_ERRORfile:///opt/src/src/main/java/io/github/jhipster/sample/web/rest/errors/ErrorConstants.java:9:60:9:86", "hostfile:///opt/src/src/main/java/io/github/jhipster/sample/config/JHipsterProperties.java:330:35:330:45", "hostfile:///opt/src/src/main/java/io/github/jhipster/sample/config/JHipsterProperties.java:363:35:363:45", "hostfile:///opt/src/src/main/java/io/github/jhipster/sample/config/JHipsterProperties.java:440:35:440:45", "AUTHORIZATION_FAILUREfile:///opt/src/src/main/java/io/github/jhipster/sample/repository/CustomAuditEventRepository.java:25:57:25:79"]
         )
     }
 }
 
 class RegularNode extends DataFlow::ExprNode{
     RegularNode(){
-        this.asExpr() instanceof VarAccess
+        this.asExpr() instanceof VarAccess or
+        this.asExpr() instanceof Call
     }
 }
 
@@ -38,12 +39,20 @@ class DataConfig extends TaintTracking::Configuration {
 
 }
 
-// from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink
-// where cfg.hasFlowPath(source, sink)
-// select source, sink
+
+// from Variable var, string str
+// where str = var.getName() + var.getInitializer().getLocation().toString() and
+// str.regexpMatch("SYSTEM_ACCOUNTfile:///opt/src/src/main/java/io/github/jhipster/sample/config/Constants.java:22:49:22:56")
+// select var, str
+
 from DataConfig cfg, DataFlow::PathNode source, DataFlow::PathNode sink, string str
-where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode() and str = sink.getNode().asExpr().(StringLiteral).getValue()
+where cfg.hasFlowPath(source, sink) and source.getNode() != sink.getNode() and
+(
+    str = sink.getNode().asExpr().(VarAccess).getVariable().getName() or
+    str = sink.getNode().asExpr().(Call).getCallee().toString()
+)
 select
-source.toString(),
-source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation(),
-str, sink.getNode().asExpr().getEnclosingCallable().getName()
+source.getNode().asExpr().(VarAccess).getVariable().getInitializer().toString(),
+source.getNode().asExpr().(VarAccess).getVariable().getInitializer().getLocation().toString(),
+str,
+sink.getNode().getEnclosingCallable().getName()

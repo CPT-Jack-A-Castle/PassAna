@@ -148,7 +148,7 @@ class Analyzer(object):
         csv_data_by_group = csv_data.groupby('project')
 
         for group, group_item in tqdm(csv_data_by_group):
-            self.specific_str_context(projs_path, group, (group_item['col1'] + group_item['col3']).tolist())
+            self.specific_str_context(projs_path, group, (group_item['col0'] + group_item['col3']).tolist())
 
     def specific_str_context(self, proj_path: str, group: str, group_item: list):
         pass
@@ -314,10 +314,6 @@ def analyze_str_context(base_path, str_path, language_type, debug=False):
     ana.set_cmd('context_to')
     ana.specific_str_context_array(base_path, str_path)
 
-    decode_bqrs_all(base_path, 'context_to', language_type)
-    context_to = merge_csv(base_path, cmd='context_to', language=language_type)
-    return context_to
-
 
 class JavaAnalyzer(Analyzer):
 
@@ -337,12 +333,12 @@ class JavaAnalyzer(Analyzer):
         # read
         with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
             lines = f.readlines()
-            ql_code = lines[18]
+            ql_code = lines[19]
 
         # read the ql file to change the pattern that we want to match
         str_array = re.findall('\[.*\]',ql_code)[0]
-        new_line = ql_code.replace(str_array, str(group_item))
-        lines[18] = new_line
+        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
+        lines[19] = new_line
 
         # replace
         with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
