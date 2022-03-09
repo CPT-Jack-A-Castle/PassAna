@@ -360,6 +360,29 @@ class PythonAnalyzer(Analyzer):
         super(PythonAnalyzer, self).__init__(debug)
         self.language_type = "python"
 
+    def specific_str_context(self, proj_path: str, group: str, group_item: list):
+        """
+        ind flow context
+        :param proj_path: projs_path: projects path
+        :param group: specific project
+        :param group_item: all string of specific project
+        :return:
+        """
+        complete_path = proj_path + '/' + group
+        # read
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
+            lines = f.readlines()
+            ql_code = lines[15]
 
+        # read the ql file to change the pattern that we want to match
+        str_array = re.findall('\[.*\]',ql_code)[0]
+        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
+        lines[15] = new_line
+
+        # replace
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
+            f.writelines(lines)
+
+        self.ql_str_context(complete_path)
 
 
