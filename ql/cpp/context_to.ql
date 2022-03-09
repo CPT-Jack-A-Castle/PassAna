@@ -6,28 +6,31 @@
  */
 
 import cpp
-import semmle.code.java.dataflow.TaintTracking
-import semmle.code.java.dataflow.DataFlow
-import DataFlow::PathGraph
-import semmle.code.java.dataflow.DataFlow
-import semmle.code.java.security.Encryption
+import semmle.code.cpp.dataflow.DataFlow
 
 
 
-from VarAccess var, MethodAccess call, VarAccess other, string str, string context
-where str = var.getVariable().getName() + var.getVariable().getInitializer().getLocation().toString() and
+from Variable var, FunctionCall call, string str, string context
+where str = var.getName() + var.getInitializer().getLocation().toString() and
 str in
-["passwordfile:///opt/src/src/test/java/com/alibaba/druid/TestRollBack.java:49:27:49:36"]
+["privreqfile:///opt/src/nping/NpingOps.cc:2296:22:2296:39"]
 and
 (
+    // (
+    //     DataFlow::localFlow(DataFlow::exprNode(var.getInitializer().getExpr()), DataFlow::exprNode(other.getInitializer().getExpr())) and
+    //     context = other.getName()
+    // ) or
     (
-        DataFlow::localFlow(DataFlow::exprNode(var), DataFlow::exprNode(other)) and
-        context = other.getVariable().getName()
-    ) or
-    (
-        DataFlow::localFlow(DataFlow::exprNode(var), DataFlow::exprNode(call.getAnArgument())) and
-        context = call.getMethod().getQualifiedName()
+        DataFlow::localFlow(DataFlow::exprNode(var.getInitializer().getExpr()), DataFlow::exprNode(call.getAnArgument())) and
+        context = call.getNameQualifier().toString()
     )
 
 )
-select var.getVariable().getName(), var.getVariable().getInitializer().getLocation(), context
+select var.getName(), var.getInitializer().getLocation(), context
+
+
+// from FunctionCall call, Variable var
+// where
+// call.getTarget().getName().toString().regexpMatch("nping.*") and
+// call.getAnArgument().getValue() = var.getInitializer().getExpr().getValue()
+// select call, var, call.getAnArgument()
