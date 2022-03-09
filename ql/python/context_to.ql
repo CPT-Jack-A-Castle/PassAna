@@ -10,16 +10,14 @@ import semmle.python.dataflow.new.TaintTracking
 import semmle.python.dataflow.new.DataFlow
 
 
-from Name var, Name other, string str, string context, DataFlow::MethodCallNode method
+from Name var, string str, string context, DataFlow::MethodCallNode method
 where str = var.getId() + var.getLocation().toString() and
 str in
 ["EMAIL_PASSWORD/opt/src/sendEmail/EMailClient.py:15"]
 and
 (
     (
-        other.getLocation().toString().regexpMatch("/opt/src/sendEmail/EMailClient.py.*") and
-        DataFlow::localFlow(DataFlow::exprNode(var), DataFlow::exprNode(other)) and
-        context = other.getId()
+        context = var.getVariable().getAUse().getId()
     ) or
     (
         method.getLocation().toString() = var.getVariable().getALoad().getParentNode().getLocation().toString() and

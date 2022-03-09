@@ -8,9 +8,11 @@
 import cpp
 
 
-from Variable var, string namestr
+from Variable var, string namestr, string text
 where var.getInitializer().getExpr().getActualType().toString() = "const char *" and
-namestr = var.getInitializer().getExpr().getValue().toLowerCase() and
+text = var.getInitializer().getExpr().getValue() and
+namestr = var.getName() and
+(text != "0" and text != "[empty string]" and text.length() >= 6) and
 	(namestr.regexpMatch("\\w*password\\w*") or
      namestr.regexpMatch("\\w*passwd\\w*") or
       namestr.regexpMatch("\\w*pwd\\w*") or
@@ -23,5 +25,5 @@ namestr = var.getInitializer().getExpr().getValue().toLowerCase() and
       namestr.regexpMatch("\\w*account\\w*")
 	)
 
-select var.getName().toString(), var.getInitializer().getExpr().getValue(), var.getInitializer().getLocation()
+select var.getName().toString(), var.getInitializer().getExpr().getValue(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation()
 
