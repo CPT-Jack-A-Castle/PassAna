@@ -10,7 +10,8 @@ import java
 from Variable var, string namestr, string contentstr
 where var.getType() instanceof  TypeString and
 	   namestr = var.getName().toLowerCase() and
-	   contentstr = var.toString().toLowerCase() and
+	   contentstr = var.getInitializer().toString().toLowerCase() and
+         contentstr.length() >= 6 and
 	(namestr.regexpMatch("\\w*password\\w*") or
      namestr.regexpMatch("\\w*passwd\\w*") or
       namestr.regexpMatch("\\w*pwd\\w*") or
@@ -24,4 +25,4 @@ where var.getType() instanceof  TypeString and
       contentstr.regexpMatch("\\w*com\\w*")
 	)
 
-select var.getName().toString(), var.getInitializer().toString(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation().toString()
+select var.getName().toString(), var.getInitializer().toString(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation()
