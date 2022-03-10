@@ -1,7 +1,9 @@
-from ql.analyzer import JavaAnalyzer, analyze_str, analyze_str_context
+from ql.analyzer import init_analyzer
 
 if __name__ == '__main__':
     base = '/home/rain/program/tmp'
-    context_to, context_from = analyze_str_context(base, f'{base}/string.csv', 'java')
+    language = 'java'
+    analyzer = init_analyzer(language)
+    analyzer.get_context_for_strs(base, f'{base}/string.csv')
+    context_to = analyzer.merge_csv(base, 'context_to')
     context_to.to_csv(f'{base}/str_context_to.csv')
-    context_from.to_csv(f'{base}/str_context_from.csv')

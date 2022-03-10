@@ -3,6 +3,7 @@ import logging
 import json
 import string
 import re
+from abc import abstractmethod
 
 import numpy as np
 import pandas
@@ -29,6 +30,8 @@ class Analyzer(object):
         self.language_type = None
         # default cmd
         self.cmd = 'cmd'
+        # ql replace line
+        self.ql_replace = 1
 
         if debug:
             logging.basicConfig(format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s',
@@ -38,7 +41,7 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def set_cmd(self, cmd):
-        if cmd not in ['context_from', 'context_to', 'findString', 'findPass', 'checkRemote']:
+        if cmd not in ['context_from', 'context_to', 'findString', 'findPass']:
             logging.error(f'Not support {cmd}!')
             return
         self.cmd = cmd
@@ -76,7 +79,7 @@ class Analyzer(object):
                 return False
         return True
 
-    def ql_find_str(self, src, skip=False, threads=8):
+    def run_ql_cmd(self, src, skip=False, threads=8):
         """
         Run Ql file to analyze the database
         :param skip:
@@ -107,51 +110,136 @@ class Analyzer(object):
                 logging.error(f'Error: Can only run queries')
                 return False
 
-    def ql_str_context(self, src, skip=False, threads=8):
-        """
-        run ql analyze to find string context flow
-        :param src: database path
-        :param skip: skip if bqrs is exited
-        :param threads:
-        :return:
-        """
-        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
-            logging.info(f'{src} has been analyzed.')
-            return False
-
-        # analyze ql command
-        cmd = f"codeql database analyze  " \
-              f"{src} ql/{self.language_type}/{self.cmd}.ql " \
-              f"--format=csv --output={src}/{self.cmd}.csv --rerun --threads {threads}"
-
-        # handler running
-        self._ql_task = pexpect.spawn(cmd, timeout=3600)
-        while True:
-            line = self._ql_task.readline().decode()
-            logging.debug(line)
-            if line.startswith('Interpreting results'):
-                logging.info(f'Interpreting results')
-                return True
-            if line.startswith('A fatal error'):
-                logging.error(f'A fatal error')
-                return False
-
-    def specific_str_context_array(self, projs_path: str, source_path: str):
+    def get_context_for_strs(self, projs_path: str, source_path: str):
         """
         find flow context according to csv file (multiple item)
         :param projs_path: projects path
         :param source_path: string csv file
         :return:
         """
+        self.set_cmd("context_to")
         csv_data = pandas.read_csv(source_path, index_col=0)
         # group by project
         csv_data_by_group = csv_data.groupby('project')
 
         for group, group_item in tqdm(csv_data_by_group):
-            self.specific_str_context(projs_path, group, (group_item['col0'] + group_item['col3']).tolist())
+            self.get_context_for_str(projs_path, group, (group_item['col0'] + group_item['col3']).tolist())
+            self.decode_bqrs2csv(f"{projs_path}/{group}")
 
-    def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        pass
+    def get_context_for_str(self, proj_path: str, group: str, group_item: list):
+        """
+        ind flow context
+        :param proj_path: projs_path: projects path
+        :param group: specific project
+        :param group_item: all string of specific project
+        :return:
+        """
+        complete_path = proj_path + '/' + group
+        # read
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
+            lines = f.readlines()
+            ql_code = lines[self.ql_replace]
+
+        # read the ql file to change the pattern that we want to match
+        str_array = re.findall('\[.*\]',ql_code)[0]
+        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
+        lines[self.ql_replace] = new_line
+
+        # replace
+        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
+            f.writelines(lines)
+
+        self.run_ql_cmd(complete_path)
+
+    def get_str_from_projects(self, base_path, skip=False, threads=8):
+        """
+        run ql for all dataset
+        :param base_path: dir path
+        :param language:
+        :param skip: skip if the dataset had been analyzed
+        :param threads:
+        :return:
+        """
+        self.set_cmd("findString")
+        dirs = tqdm(os.listdir(base_path))
+
+        for proj_dir in dirs:
+            dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
+
+            result = self.run_ql_cmd(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+            if result:
+                self.decode_bqrs2csv(f'{base_path}/{proj_dir}')
+
+    def get_pass_from_projects(self, base_path, skip=False, threads=8):
+        """
+        run ql for all dataset
+        :param base_path: dir path
+        :param language:
+        :param skip: skip if the dataset had been analyzed
+        :param threads:
+        :return:
+        """
+        self.set_cmd("findPass")
+        dirs = tqdm(os.listdir(base_path))
+
+        for proj_dir in dirs:
+            dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
+
+            result = self.run_ql_cmd(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+            if result:
+                self.decode_bqrs2csv(f'{base_path}/{proj_dir}')
+
+    def decode_bqrs_all(self, base_path, cmd):
+        """
+        decode all bqrs in $base_path$
+        :param base_path: path
+        :param cmd:  kinds of ql command you want to decode e.g., result of [findString, findPass]
+        :return:
+        """
+        self.set_cmd(cmd)
+        for proj_dir in tqdm(os.listdir(base_path)):
+            self.decode_bqrs2csv(f'{base_path}/{proj_dir}')
+
+    def merge_csv(self, base_path, cmd):
+        """
+        merge all csv file in $project-home$
+        :param base_path:
+        :param cmd: kinds of ql command you want to decode e.g., result of [findString, findPass]
+        :return:
+        """
+        self.set_cmd(cmd)
+        out = None
+        first = True
+        dirs = tqdm(os.listdir(base_path))
+        for proj_dir in dirs:
+            if not os.path.exists(f'{base_path}/{proj_dir}/{cmd}.csv'):
+                continue
+            data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
+            # add project name
+            data['project'] = proj_dir
+
+            if first:
+                out = data
+                first = False
+            else:
+                out = pd.concat([out, data], ignore_index=True)
+
+        # drop nan
+        out = out.dropna()
+
+        # more data process according to language
+        if self.cmd in ["findPass", "findString"]:
+            out = self.external_process(out)
+
+        return out
+
+    def external_process(self, out):
+        """
+        if have more process
+        :param out:
+        :return:
+        """
+        return out
 
     def decode_bqrs2json(self, src):
         """
@@ -189,158 +277,36 @@ class Analyzer(object):
         return out
 
     @staticmethod
-    def create_dfg_from_csv(csv: pd.DataFrame):
-        groups = csv.groupby(['col0', 'col1'])
-        context = dict()
-        for group_key, group_value in groups:
-            variable_name = group_key[0].split()
+    def clear_csv_cache(base_path, cmd):
+        for proj_dir in tqdm(os.listdir(base_path)):
+            try:
+                path = f'{base_path}/{proj_dir}'
+                os.remove(f'{path}/{cmd}.csv')
+            except Exception as e:
+                continue
 
-            words = ";".join(group_value['col2'])
-            words = words.split(';')
-            words = set(words)
-            variable_context = " ".join(words)
-            variable_context = process_text(variable_context)
-
-            context[variable_name] = variable_context
-        return context
-
-
-def process_text(text):
-    variable_context = text.replace('(...)', '')
-    variable_context = variable_context.replace('...', '')
-    variable_context = variable_context.replace('=', '')
-    return variable_context
-
-
-def init_analyzer(language,skip):
+def init_analyzer(language, debug = False):
     analyzer = {
-        "java": JavaAnalyzer(skip),
-        "python": PythonAnalyzer(skip),
-        "cpp": CppAnalyzer(skip),
-        "javascript": JavaScriptAnalyzer(skip),
-        "csharp": CsharpAnalyzer(skip)
+        "java": JavaAnalyzer(debug),
+        "python": PythonAnalyzer(debug),
+        "cpp": CppAnalyzer(debug),
+        "javascript": JavaScriptAnalyzer(debug),
+        "csharp": CsharpAnalyzer(debug)
     }
     return analyzer.get(language)
-
-
-def analyze_str(base_path, cmd, language, skip=False, threads=8):
-    """
-    run ql for all dataset
-    :param base_path: dir path
-    :param cmd:
-    :param language:
-    :param skip: skip if the dataset had been analyzed
-    :param threads:
-    :return:
-    """
-
-    analyzer: Analyzer = init_analyzer(language, False)
-    analyzer.set_cmd(cmd)
-    dirs = tqdm(os.listdir(base_path))
-
-    for proj_dir in dirs:
-        dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
-
-        result = analyzer.ql_find_str(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
-        if result:
-            analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
-
-
-def decode_bqrs_all(base_path, cmd, language):
-    """
-    decode all bqrs in $base_path$
-    :param base_path: path
-    :param cmd:  kinds of ql command you want to decode e.g., result of [findString, findPass]
-    :param language:
-    :return:
-    """
-
-    analyzer: Analyzer = init_analyzer(language, False)
-    analyzer.set_cmd(cmd)
-    for proj_dir in tqdm(os.listdir(base_path)):
-        analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
-
-
-def merge_csv(base_path, cmd, language):
-    """
-    merge all csv file in $project-home$
-    :param base_path:
-    :param cmd: kinds of ql command you want to decode e.g., result of [findString, findPass]
-    :param language:
-    :return:
-    """
-    analyzer: Analyzer = init_analyzer(language, False)
-    analyzer.set_cmd('findString')
-    out = None
-    first = True
-    dirs = tqdm(os.listdir(base_path))
-    for proj_dir in dirs:
-        if not os.path.exists(f'{base_path}/{proj_dir}/{cmd}.csv'):
-            continue
-        data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
-        # add project name
-        data['project'] = proj_dir
-
-        if first:
-            out = data
-            first = False
-        else:
-            out = pd.concat([out, data], ignore_index=True)
-
-    # drop nan
-    out = out.dropna()
-
-    if language == "java":
-        out = out[out['col1'].str.contains('"')]
-        out = out[out['col1'].str.len() >= 6]
-        out['col1'] = out['col1'].str.replace('"','')
-
-    return out
-
-
-def analyze_str_context(base_path, str_path, language_type, debug=False):
-    ana:Analyzer = None
-    if language_type == 'java':
-        ana = JavaAnalyzer(debug)
-    if language_type == 'cpp':
-        ana = CppAnalyzer(debug)
-    if language_type == 'python':
-        ana = PythonAnalyzer(debug)
-
-    ana.set_cmd('context_to')
-    ana.specific_str_context_array(base_path, str_path)
-
 
 class JavaAnalyzer(Analyzer):
 
     def __init__(self, debug):
         super(JavaAnalyzer, self).__init__(debug)
         self.language_type = "java"
+        self.ql_replace = 19
 
-    def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        """
-        ind flow context
-        :param proj_path: projs_path: projects path
-        :param group: specific project
-        :param group_item: all string of specific project
-        :return:
-        """
-        complete_path = proj_path + '/' + group
-        # read
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
-            lines = f.readlines()
-            ql_code = lines[19]
-
-        # read the ql file to change the pattern that we want to match
-        str_array = re.findall('\[.*\]',ql_code)[0]
-        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
-        lines[19] = new_line
-
-        # replace
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
-            f.writelines(lines)
-
-        self.ql_str_context(complete_path)
+    def external_process(self, out: pd.DataFrame):
+        out = out[out['col1'].str.contains('"')]
+        out = out[out['col1'].str.len() >= 6]
+        out['col1'] = out['col1'].str.replace('"','')
+        return out
 
 
 class CppAnalyzer(Analyzer):
@@ -348,6 +314,7 @@ class CppAnalyzer(Analyzer):
     def __init__(self, debug):
         super(CppAnalyzer, self).__init__(debug)
         self.language_type = "cpp"
+        self.ql_replace = 15
 
 
 class PythonAnalyzer(Analyzer):
@@ -355,47 +322,18 @@ class PythonAnalyzer(Analyzer):
     def __init__(self, debug):
         super(PythonAnalyzer, self).__init__(debug)
         self.language_type = "python"
-
-    def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        """
-        ind flow context
-        :param proj_path: projs_path: projects path
-        :param group: specific project
-        :param group_item: all string of specific project
-        :return:
-        """
-        complete_path = proj_path + '/' + group
-        # read
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'r') as f:
-            lines = f.readlines()
-            ql_code = lines[15]
-
-        # read the ql file to change the pattern that we want to match
-        str_array = re.findall('\[.*\]',ql_code)[0]
-        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
-        lines[15] = new_line
-
-        # replace
-        with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
-            f.writelines(lines)
-
-        self.ql_str_context(complete_path)
+        self.ql_replace = 15
 
 
 class JavaScriptAnalyzer(Analyzer):
     def __init__(self, debug):
         super(JavaScriptAnalyzer, self).__init__(debug)
         self.language_type = "javascript"
+        self.ql_replace = 13
 
-    def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        # TODO: string context
-        pass
 
 class CsharpAnalyzer(Analyzer):
     def __init__(self, debug):
         super(CsharpAnalyzer, self).__init__(debug)
         self.language_type = "csharp"
-
-    def specific_str_context(self, proj_path: str, group: str, group_item: list):
-        # TODO: string context
-        pass
+        self.ql_replace = 13

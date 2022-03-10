@@ -1,9 +1,9 @@
-from ql.analyzer import JavaAnalyzer, analyze_str, analyze_str_context, decode_bqrs_all, merge_csv
+from ql.analyzer import init_analyzer
 
 if __name__ == '__main__':
-    language = 'python'
-    base = '/home/rain/program/python'
-    analyze_str_context(base, f'{base}/pass.csv', language)
-    decode_bqrs_all(base, 'context_to', language)
-    # context_to = merge_csv(base, cmd='context_to', language='java')
-    # context_to.to_csv(f'{base}/pass_context_to.csv')
+    base = '/home/rain/program/tmp'
+    language = 'java'
+    analyzer = init_analyzer(language)
+    analyzer.get_context_for_strs(base, f'{base}/pass.csv')
+    context_to = analyzer.merge_csv(base, 'context_to')
+    context_to.to_csv(f'{base}/pass_context_to.csv')

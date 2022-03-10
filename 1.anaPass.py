@@ -1,8 +1,9 @@
-from ql.analyzer import analyze_str, merge_csv, decode_bqrs_all
+from ql.analyzer import init_analyzer
 
 if __name__ == '__main__':
-    language = 'cpp'
-    base = '/home/rain/program/cpp'
-    analyze_str(base, 'findPass', language, skip=False)
-    data = merge_csv(base, 'findPass', language)
+    language = 'java'
+    base = '/home/rain/program/tmp'
+    analyzer = init_analyzer(language)
+    analyzer.get_str_from_projects(base,threads=8)
+    data = analyzer.merge_csv(base, "findPass")
     data.to_csv(f'{base}/pass.csv')
