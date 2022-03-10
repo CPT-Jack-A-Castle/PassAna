@@ -212,7 +212,18 @@ def process_text(text):
     return variable_context
 
 
-def analyze_str(base_path, cmd, language, skip=True, threads=8):
+def init_analyzer(language,skip):
+    analyzer = {
+        "java": JavaAnalyzer(skip),
+        "python": PythonAnalyzer(skip),
+        "cpp": CppAnalyzer(skip),
+        "javascript": JavaScriptAnalyzer(skip),
+        "csharp": CsharpAnalyzer(skip)
+    }
+    return analyzer.get(language)
+
+
+def analyze_str(base_path, cmd, language, skip=False, threads=8):
     """
     run ql for all dataset
     :param base_path: dir path
@@ -223,12 +234,7 @@ def analyze_str(base_path, cmd, language, skip=True, threads=8):
     :return:
     """
 
-    if language == "java":
-        analyzer = JavaAnalyzer(False)
-    elif language == "python":
-        analyzer = PythonAnalyzer(False)
-    else:
-        analyzer = CppAnalyzer(False)
+    analyzer: Analyzer = init_analyzer(language, False)
     analyzer.set_cmd(cmd)
     dirs = tqdm(os.listdir(base_path))
 
@@ -249,12 +255,7 @@ def decode_bqrs_all(base_path, cmd, language):
     :return:
     """
 
-    if language == "java":
-        analyzer = JavaAnalyzer(False)
-    elif language == "python":
-        analyzer = PythonAnalyzer(False)
-    else:
-        analyzer = CppAnalyzer(False)
+    analyzer: Analyzer = init_analyzer(language, False)
     analyzer.set_cmd(cmd)
     for proj_dir in tqdm(os.listdir(base_path)):
         analyzer.decode_bqrs2csv(f'{base_path}/{proj_dir}')
@@ -268,12 +269,7 @@ def merge_csv(base_path, cmd, language):
     :param language:
     :return:
     """
-    if language == "java":
-        analyzer = JavaAnalyzer(False)
-    elif language == "python":
-        analyzer = PythonAnalyzer(False)
-    else:
-        analyzer = CppAnalyzer(False)
+    analyzer: Analyzer = init_analyzer(language, False)
     analyzer.set_cmd('findString')
     out = None
     first = True
@@ -386,3 +382,20 @@ class PythonAnalyzer(Analyzer):
         self.ql_str_context(complete_path)
 
 
+class JavaScriptAnalyzer(Analyzer):
+    def __init__(self, debug):
+        super(JavaScriptAnalyzer, self).__init__(debug)
+        self.language_type = "javascript"
+
+    def specific_str_context(self, proj_path: str, group: str, group_item: list):
+        # TODO: string context
+        pass
+
+class CsharpAnalyzer(Analyzer):
+    def __init__(self, debug):
+        super(CsharpAnalyzer, self).__init__(debug)
+        self.language_type = "csharp"
+
+    def specific_str_context(self, proj_path: str, group: str, group_item: list):
+        # TODO: string context
+        pass
