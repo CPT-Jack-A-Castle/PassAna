@@ -10,4 +10,4 @@ import csharp
 from AssignExpr assgin, string text
 where text = assgin.getRValue().getValue().toString()  and
 text.length() >=6
-select assgin.getLValue().(VariableAccess).getTarget().getName(), assgin.getRValue().getValue(), assgin.getLocation().getStartLine(), assgin.getLocation()
+select assgin.getLValue().(VariableAccess).getTarget().getName(), assgin.getRValue().getValue(), assgin.getLValue().(VariableAccess).getTarget().getLocation().getStartLine(), assgin.getLValue().(VariableAccess).getTarget().getLocation()

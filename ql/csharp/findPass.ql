@@ -22,4 +22,4 @@ namestr.regexpMatch("\\w*server\\w*") or
 namestr.regexpMatch("\\w*username\\w*") or
 namestr.regexpMatch("\\w*account\\w*")
 )
-select assgin.getLValue().(VariableAccess).getTarget().getName(), text, assgin.getLocation().getStartLine(), assgin.getLocation()
+select assgin.getLValue().(VariableAccess).getTarget().getName(), assgin.getRValue().getValue(), assgin.getLValue().(VariableAccess).getTarget().getLocation().getStartLine(), assgin.getLValue().(VariableAccess).getTarget().getLocation()
