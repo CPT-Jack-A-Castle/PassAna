@@ -1,22 +1,13 @@
 # coding: utf-8
+import json
 import logging
-import json
-import string
-import re
-from abc import abstractmethod
-
-import numpy as np
-import pandas
-import pexpect
 import os
-import csv
+import re
+
+import pandas
 import pandas as pd
-
-import http.client
-import json
-
+import pexpect
 from tqdm import tqdm
-from urllib3 import response
 
 
 class Analyzer(object):
@@ -30,7 +21,8 @@ class Analyzer(object):
         self.language_type = None
         # default cmd
         self.cmd = 'cmd'
-        # ql replace line
+        # ql replace line about str candidates. Different languages have different value whose details are showed in
+        # context_to.ql file
         self.ql_replace = 1
 
         if debug:
@@ -41,6 +33,11 @@ class Analyzer(object):
                                 level=logging.INFO)
 
     def set_cmd(self, cmd):
+        """
+        set which codeql command will execute
+        :param cmd:
+        :return:
+        """
         if cmd not in ['context_from', 'context_to', 'findString', 'findPass']:
             logging.error(f'Not support {cmd}!')
             return
@@ -87,7 +84,8 @@ class Analyzer(object):
         :param threads: thread for running (default=1)
         """
 
-        if skip and os.path.exists(f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
+        if skip and os.path.exists(
+                f"{src}/results/getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"):
             logging.info(f' It has been analyzed.')
             return False
 
@@ -96,6 +94,7 @@ class Analyzer(object):
               f"{src} ql/{self.language_type}/{self.cmd}.ql " \
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
+        # background running
         self._ql_task = pexpect.spawn(cmd, timeout=300)
         while True:
             line = self._ql_task.readline().decode()
@@ -122,8 +121,10 @@ class Analyzer(object):
         # group by project
         csv_data_by_group = csv_data.groupby('project')
 
+        # get context in group (project)
         for group, group_item in tqdm(csv_data_by_group):
             self.get_context_for_str(projs_path, group, (group_item['col0'] + group_item['col3']).tolist())
+            # decode results
             self.decode_bqrs2csv(f"{projs_path}/{group}")
 
     def get_context_for_str(self, proj_path: str, group: str, group_item: list):
@@ -141,11 +142,11 @@ class Analyzer(object):
             ql_code = lines[self.ql_replace]
 
         # read the ql file to change the pattern that we want to match
-        str_array = re.findall('\[.*\]',ql_code)[0]
-        new_line = ql_code.replace(str_array, str(group_item).replace("'",'"'))
+        str_array = re.findall('\[.*\]', ql_code)[0]
+        new_line = ql_code.replace(str_array, str(group_item).replace("'", '"'))
         lines[self.ql_replace] = new_line
 
-        # replace
+        # replace candidates that we want to get context for
         with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
             f.writelines(lines)
 
@@ -153,9 +154,8 @@ class Analyzer(object):
 
     def get_str_from_projects(self, base_path, skip=False, threads=8):
         """
-        run ql for all dataset
+        run ql for all dataset to find string
         :param base_path: dir path
-        :param language:
         :param skip: skip if the dataset had been analyzed
         :param threads:
         :return:
@@ -163,18 +163,19 @@ class Analyzer(object):
         self.set_cmd("findString")
         dirs = tqdm(os.listdir(base_path))
 
+        # list all dir
         for proj_dir in dirs:
-            dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
-
+            dirs.set_description(f"Processing: {proj_dir.ljust(50, ' ')}")
+            # run the ql command
             result = self.run_ql_cmd(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+            # if succeed, decode the bqrs file
             if result:
                 self.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
     def get_pass_from_projects(self, base_path, skip=False, threads=8):
         """
-        run ql for all dataset
+        run ql for all dataset to find passsword
         :param base_path: dir path
-        :param language:
         :param skip: skip if the dataset had been analyzed
         :param threads:
         :return:
@@ -183,9 +184,10 @@ class Analyzer(object):
         dirs = tqdm(os.listdir(base_path))
 
         for proj_dir in dirs:
-            dirs.set_description(f"Processing: {proj_dir.ljust(50,' ')}")
-
+            dirs.set_description(f"Processing: {proj_dir.ljust(50, ' ')}")
+            # run the ql command
             result = self.run_ql_cmd(f'{base_path}/{proj_dir}', skip=skip, threads=threads)
+            # if succeed, decode the bqrs file
             if result:
                 self.decode_bqrs2csv(f'{base_path}/{proj_dir}')
 
@@ -207,13 +209,17 @@ class Analyzer(object):
         :param cmd: kinds of ql command you want to decode e.g., result of [findString, findPass]
         :return:
         """
+        # configuration
         self.set_cmd(cmd)
         out = None
         first = True
         dirs = tqdm(os.listdir(base_path))
+
+        # explore all dir
         for proj_dir in dirs:
             if not os.path.exists(f'{base_path}/{proj_dir}/{cmd}.csv'):
                 continue
+            # load csv about this project with command "cmd"
             data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
             # add project name
             data['project'] = proj_dir
@@ -285,7 +291,14 @@ class Analyzer(object):
             except Exception as e:
                 continue
 
-def init_analyzer(language, debug = False):
+
+def init_analyzer(language, debug=False):
+    """
+    initializer for language analyzer
+    :param language:
+    :param debug:
+    :return:
+    """
     analyzer = {
         "java": JavaAnalyzer(debug),
         "python": PythonAnalyzer(debug),
@@ -294,6 +307,7 @@ def init_analyzer(language, debug = False):
         "csharp": CsharpAnalyzer(debug)
     }
     return analyzer.get(language)
+
 
 class JavaAnalyzer(Analyzer):
 
@@ -305,7 +319,7 @@ class JavaAnalyzer(Analyzer):
     def external_process(self, out: pd.DataFrame):
         out = out[out['col1'].str.contains('"')]
         out = out[out['col1'].str.len() >= 6]
-        out['col1'] = out['col1'].str.replace('"','')
+        out['col1'] = out['col1'].str.replace('"', '')
         return out
 
 
