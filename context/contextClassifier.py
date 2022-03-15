@@ -6,7 +6,7 @@ from datasets import load_dataset
 from keras.layers import Dense, Conv1D, GlobalMaxPooling1D, MaxPooling1D, Dropout
 from keras.layers import Embedding
 from keras.models import Sequential
-from keras.utils import to_categorical
+from tensorflow.keras.utils import to_categorical
 from keras_preprocessing.sequence import pad_sequences
 
 from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding
@@ -134,7 +134,7 @@ if __name__ == '__main__':
     X = np.array(dataset.data['train'][0])
     Y = np.array(dataset.data['train'][1]).round()
 
-    cnnClassifier = CNNClassifierGlove(padding_len=128, class_num=2, glove_dim=60)
+    cnnClassifier = CNNClassifierGlove(padding_len=128, class_num=2, glove_dim=50)
 
     X, Y = cnnClassifier.words2vec(X, Y, fit=False)
     cnnClassifier.get_matrix_6b(f"D:\\program\\glove.6B")

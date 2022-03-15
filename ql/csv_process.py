@@ -14,16 +14,16 @@ def read_csv_from_projects(src, header):
     return csv_data.drop_duplicates()
 
 
-def split_context_csv_by_project(csv_data: pd.DataFrame, csv_context: pd.DataFrame):
+def split_context_csv_by_project(csv_str: pd.DataFrame, csv_context: pd.DataFrame):
     """
     merge the string csv with their context (if have)
-    :param csv_data:  string data
+    :param csv_str:  string data
     :param csv_context:  context data
     :return:
     """
     csv_data_by_group = csv_context.groupby(["var", "location"]).apply(_concat_context).reset_index()
 
-    merge_csv = pd.merge(csv_data, csv_data_by_group, on=['var', 'location'], how='outer')
+    merge_csv = pd.merge(csv_str, csv_data_by_group, on=['var', 'location'], how='outer')
 
     return merge_csv
 
@@ -40,6 +40,8 @@ def _concat_context(data):
 
 
 if __name__ == '__main__':
-    pass_csv = read_csv_from_projects("/home/rain/program/tmp/pass.csv", ["var", 'str', 'line', 'location', 'project'])
-    csv_data = read_csv_from_projects("/home/rain/program/tmp/pass_context_to.csv", ['var', 'location', 'context','project'])
+    pass_csv = read_csv_from_projects("/home/rain/program/tmp/pass.csv",
+                                      ["var", 'str', 'line', 'location', 'project'])
+    csv_data = read_csv_from_projects("/home/rain/program/tmp/pass_context_to.csv",
+                                      ['var', 'location', 'context', 'project'])
     split_context_csv_by_project(pass_csv, csv_data)

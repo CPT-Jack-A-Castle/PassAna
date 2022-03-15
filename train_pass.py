@@ -2,15 +2,15 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from keras.utils import to_categorical
+from keras.utils.np_utils import to_categorical
 from sklearn.model_selection import train_test_split
 
-from pwd.pwdClassifier import FastTextPwdClassifier, HASHPwdClassifier, NgramPwdClassifier
+from passwd.pwdClassifier import HASHPwdClassifier, NgramPwdClassifier, FastTextPwdClassifier
 from tokenizer.tool import train_valid_split
 
 
 def pwdHash():
-    dataset = pd.read_csv('./dataset/rockyou.txt',
+    dataset = pd.read_csv('raw_dataset/rockyou.txt',
                           delimiter="\n",
                           header=None,
                           names=["Passwords"],
@@ -29,12 +29,13 @@ def pwdHash():
 
     np.save('./dataset/pwd.npy', X)
 
+
 def randomHash():
-    dataset = pd.read_csv('./dataset/random.csv',
-                header=0,
-                # encoding="ISO-8859-1",
-                nrows =15000000
-                )['sourcestring']
+    dataset = pd.read_csv('raw_dataset/random.csv',
+                          header=0,
+                          # encoding="ISO-8859-1",
+                          nrows =15000000
+                          )['sourcestring']
 
     md5Predictor = HASHPwdClassifier(padding_len=128, class_num=2)
 
@@ -47,25 +48,30 @@ def randomHash():
     np.save('./dataset/randstr.npy', X)
 
 
+def load_csv(src):
+    with open(src,'rb') as f:
+        data = pickle.load(f)
+    return data
+
+
 def pwdNgram():
+    X = load_csv('./dataset/data.pkl').to_numpy().reshape(-1)
+    Y = load_csv('./dataset/label.pkl').to_numpy().reshape(-1)
 
-    X = np.load('./dataset/pwd&str.npy', allow_pickle=True)
-    Y = np.load('./dataset/label.npy')
+    X, X_t, Y, Y_t = train_test_split(X, Y, stratify=Y, test_size=0.1)
 
-    _, X, _, Y = train_test_split(X, Y, stratify=Y, test_size=0.01)
+    ngramPwdClassifier = NgramPwdClassifier(padding_len=128, class_num=3)
+    X, Y = ngramPwdClassifier.words2vec(X, Y, fit=True)
 
-    ngramPwdClassifier = NgramPwdClassifier(padding_len=128, class_num=2)
-    X, Y = ngramPwdClassifier.words2vec(X, Y, fit=False)
-
-    ngramPwdClassifier.get_matrix_6b(f"D:\\program\\glove.6B")
+    ngramPwdClassifier.get_matrix_6b(f"/home/rain/glove")
     train_data, valid_data = train_valid_split(X, Y)
 
     ngramPwdClassifier.create_model()
-    ngramPwdClassifier.run(train_data, valid_data, epochs=25, batch_size=64)
+    ngramPwdClassifier.run(train_data, valid_data, epochs=100, batch_size=64)
 
 
 def pwdNlp():
-    dataset = pd.read_csv('./dataset/rockyou.txt',
+    dataset = pd.read_csv('raw_dataset/rockyou.txt',
                           delimiter="\n",
                           header=None,
                           names=["Passwords"],
@@ -76,15 +82,16 @@ def pwdNlp():
     X = dataset.to_numpy().reshape(-1).tolist()
     Y = np.ones(len(dataset))
 
-    fastTextPredictor = FastTextPwdClassifier(padding_len=128, class_num=2)
+    fastTextPredictor = FastTextPwdClassifier(padding_len=128, class_num=3)
     X, Y = fastTextPredictor.words2vec(X, Y, False)
     train_data, valid_data = train_valid_split(X, Y)
 
     fastTextPredictor.create_model()
     fastTextPredictor.run(train_data, valid_data, epochs=25, batch_size=64)
 
+
 def classifier():
-    md5Predictor = HASHPwdClassifier(padding_len=128, class_num=2)
+    md5Predictor = HASHPwdClassifier(padding_len=128, class_num=3)
 
     positive_data = np.load('./dataset/pwd.npy')
     positive_label = np.ones(positive_data.shape[0])
