@@ -5,7 +5,7 @@ if __name__ == '__main__':
     language = 'python'
     base = '/home/gonghuihui/pwd_proj/python_database'
     analyzer = init_analyzer(language)
-    analyzer.get_pass_from_projects(base,threads=8)
+    analyzer.get_pass_from_projects(base, threads=8)
     data = analyzer.merge_csv(base, "findPass")
     data.to_csv(f'csv/{language}/pass.csv')
     process_found_pass(f'csv/{language}')
