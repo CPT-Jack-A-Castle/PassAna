@@ -123,7 +123,7 @@ class Analyzer(object):
 
         # get context in group (project)
         for group, group_item in tqdm(csv_data_by_group):
-            self.get_context_for_str(projs_path, group, (group_item['col0'] + group_item['col3']).tolist())
+            self.get_context_for_str(projs_path, group, (group_item['var'] + group_item['location']).tolist())
             # decode results
             self.decode_bqrs2csv(f"{projs_path}/{group}")
 
@@ -221,6 +221,7 @@ class Analyzer(object):
                 continue
             # load csv about this project with command "cmd"
             data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
+            data.columns = ["var", 'str', 'line', 'location']
             # add project name
             data['project'] = proj_dir
 
@@ -232,6 +233,7 @@ class Analyzer(object):
 
         # drop nan
         out = out.dropna()
+        out = out.drop_duplicates()
 
         # more data process according to language
         if self.cmd in ["findPass", "findString"]:
@@ -317,9 +319,9 @@ class JavaAnalyzer(Analyzer):
         self.ql_replace = 19
 
     def external_process(self, out: pd.DataFrame):
-        out = out[out['col1'].str.contains('"')]
-        out = out[out['col1'].str.len() >= 6]
-        out['col1'] = out['col1'].str.replace('"', '')
+        out = out[out['str'].str.contains('"')]
+        out = out[out['str'].str.len() >= 6]
+        out['str'] = out['str'].str.replace('"', '')
         return out
 
 
