@@ -52,7 +52,7 @@ def train_valid_split(X, Y):
         :param Y: Y[,]
         :return:
         """
-    train_X, valid_X, train_Y, valid_Y = train_test_split(X, Y, test_size=0.2, random_state=0)
+    train_X, valid_X, train_Y, valid_Y = train_test_split(X, Y, test_size=0.1, random_state=2022, shuffle=True)
     return [train_X, np.array(train_Y, dtype=int)], [valid_X, np.array(valid_Y, dtype=int)]
 
 

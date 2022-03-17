@@ -1,31 +1,22 @@
+import collections
+import math
 import os
 import pickle
+import random
+import string
 
 import numpy as np
-from tqdm import tqdm
-from xkcdpass import xkcd_password as xp
+import scipy
+from scipy import stats
 from password_generator import PasswordGenerator
+from tqdm import tqdm
+
 import pandas as pd
-
-
-class XhcdPassGeneratorLocal(object):
-    def __init__(self, min_length=5, max_length=8):
-        wordfile = xp.locate_wordfile()
-        self.mywords = xp.generate_wordlist(wordfile=wordfile, min_length=min_length, max_length=max_length)
-
-    def generate(self, word):
-        return xp.generate_xkcdpassword(self.mywords, acrostic=word)
-
-    def generate_muil(self, words):
-        passwords = []
-        for word in words:
-            passwords.append(self.generate(word))
-        return passwords
-
 
 class RandomPasGeneratorLocal(object):
     def __init__(self):
         self.pwo = PasswordGenerator()
+        self.pwo.maxlen=50
 
     def generate(self):
         return self.pwo.generate()
@@ -34,7 +25,30 @@ class RandomPasGeneratorLocal(object):
         passwords = []
         for i in tqdm(range(num)):
             passwords.append(self.generate())
-        return np.array(passwords)
+        return pd.DataFrame(passwords)
+
+
+def _cal_entropy(text):
+    counter_char = collections.Counter(text)
+    entropy = 0
+    for c, ctn in counter_char.items():
+        _p = float(ctn)/len(text)
+        entropy += -1 * _p * math.log(_p, 2)
+    return entropy
+
+
+def get_entropy(data_df):
+    str_data = data_df
+    str_data.columns = ['str']
+    str_ent = str_data['str'].apply(lambda x: _cal_entropy(x))
+    return str_ent
+
+
+def three_sigma_deduce(src):
+    data = pd.read_csv(src)
+    str_ent = get_entropy(data)
+    data = data[np.abs(stats.zscore(str_ent)) < 3]
+    data.to_csv(src, index=False)
 
 
 def process_found_pass(src):
@@ -61,15 +75,28 @@ def process_found_pass(src):
     data.to_csv(f"{src}/pass.csv")
 
 
-def generate_random_pass():
+def generate_random_pass(num):
     """
     generate random password
     :return:
     """
-    t = RandomPasGeneratorLocal()
-    data: np.ndarray = t.generate_muil(100000)
-    with open('../raw_dataset/random_pass.npy', 'wb') as f:
-        np.save(f, data)
+    passwords = []
+    pwo = PasswordGenerator()
+    for i in tqdm(range(num)):
+        passwords.append(pwo.generate())
+    passwords = pd.DataFrame(passwords)
+    passwords.to_csv("raw_dataset/random_pass.csv", index=False)
+
+
+def generate_random_token(num):
+    tokens = []
+    for count in [40, 35, 32, 24]:
+        for i in range(num):
+            tmp = random.sample(string.ascii_letters + string.digits, count)
+            token = ''.join(tmp)
+            tokens.append(token)
+    tokens = pd.DataFrame(tokens)
+    tokens.to_csv('raw_dataset/tokens.csv', index=False)
 
 
 def remove_pass_from_string(src):
@@ -92,34 +119,26 @@ def remove_pass_from_string(src):
 
 
 def merge_and_label():
-    with open('../raw_dataset/random_pass.npy', 'rb') as f:
-        randowm_pass = np.load(f, allow_pickle=True).tolist()
-    with open('../raw_dataset/rockyou.npy', 'rb') as f:
-        user_pass = np.load(f, allow_pickle=True).tolist()
-        user_pass = [ap[0] for ap in user_pass]
-    with open('../raw_dataset/nopass_str.npy', 'rb') as f:
-        nopass = np.load(f, allow_pickle=True)
+    nopass_str = pd.read_csv('raw_dataset/nopass_str.csv')
+    randowm_pass = pd.read_csv('raw_dataset/random_pass.csv', chunksize=100000).get_chunk(100000)
+    user_pass = pd.read_csv('raw_dataset/password.csv', chunksize=100000).get_chunk(100000)
+    tokens = pd.read_csv('raw_dataset/tokens.csv', chunksize=100000).get_chunk(100000)
 
     data = []
     label = []
-    for i, p in enumerate([randowm_pass, user_pass, nopass]):
-        p = pd.DataFrame(p,dtype=str)
+    for i, p in enumerate([randowm_pass, user_pass, nopass_str, tokens]):
         p = p.dropna()
         p = p.to_numpy().reshape(-1).tolist()
         label.extend(np.zeros(len(p), dtype=int) + i)
         data.extend(p)
     data = pd.DataFrame(data, dtype=str)
     label = pd.DataFrame(label, dtype=int)
-    with open('../dataset/data.pkl', 'wb') as f:
+    with open('dataset/data.pkl', 'wb') as f:
         pickle.dump(data, f)
-    with open('../dataset/label.pkl', 'wb') as f:
+    with open('dataset/label.pkl', 'wb') as f:
         pickle.dump(label, f)
 
 
-
 if __name__ == '__main__':
-    # merge_and_label()
-    # generate_no_pass_str('/home/rain/PassAna/csv')
-    remove_pass_from_string('/home/rain/PassAna/csv/python')
-
+    three_sigma_deduce("../raw_dataset/password.csv")
 
