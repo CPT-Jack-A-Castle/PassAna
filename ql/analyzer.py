@@ -178,7 +178,7 @@ class Analyzer(object):
         :param base_path: dir path
         :param skip: skip if the dataset had been analyzed
         :param threads:
-        :return:
+        :return: None
         """
         self.set_cmd("findPass")
         dirs = tqdm(os.listdir(base_path))

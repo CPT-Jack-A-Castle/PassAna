@@ -1,0 +1,189 @@
+import hashlib
+import logging
+import sys
+from abc import abstractmethod
+import zipfile
+import nltk
+import numpy as np
+from datasets import load_dataset
+from keras import metrics
+from keras.layers import Dense, GlobalAveragePooling1D, Flatten, Conv2D, Conv1D, MaxPooling1D, GlobalMaxPooling1D, \
+    Dropout
+from keras.layers import Embedding
+from keras.models import Sequential
+from keras.preprocessing import sequence
+from keras.utils.np_utils import to_categorical
+from keras_preprocessing.sequence import pad_sequences
+from keras_preprocessing.text import text_to_word_sequence
+from tensorflow import keras
+from tqdm import tqdm
+import pandas as pd
+
+from passwd.pwdClassifier import PwdClassifier
+from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding
+
+MAX_NB_WORDS = 100000
+
+
+class PassFinderContextClassifier(PwdClassifier):
+    def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
+        super(PassFinderContextClassifier, self).__init__(padding_len, class_num, debug)
+        self.embedding_dim = embedding_dim
+
+    def create_model(self):
+        """
+        create keras model
+        :return:
+        """
+        logging.info("Create Model...")
+        model = Sequential()
+        model.add(Conv1D(64, 32, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
+        model.add(Dense(64, activation='relu'))
+        model.add(Conv1D(32, 16, activation='relu', padding="same"))
+        model.add(Dense(64, activation='relu'))
+        model.add(Conv1D(16, 8, activation='relu', padding="same"))
+        model.add(Flatten())
+        model.add(Dense(self.class_num, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=["acc",
+                                                                                  keras.metrics.Precision(),
+                                                                                  keras.metrics.Recall()])
+        model.summary()
+        self.model = model
+
+    def _processing_texts(self, texts):
+        """
+        Divide the texts to words
+        :param texts:
+        :return:
+        """
+        logging.info("pre-processing train data...")
+        processed_docs_train = []
+        for doc in tqdm(texts):
+            doc = list(doc)
+            processed_docs_train.append(doc)
+        return processed_docs_train
+
+    def _fit_words_dict(self, processed_docs_train):
+        logging.info("Tokenizing input data...")
+        tokenizer = MyTokenizer(num_words=MAX_NB_WORDS, lower=False, char_level=False)
+        tokenizer.fit_on_texts(processed_docs_train)
+        self.tokenizer = tokenizer
+
+    def _tokenizer_words(self, processed_docs_train):
+        """
+        Leverage tokenizer to map texts
+        :param processed_docs_train: texts
+        :return:
+        """
+        if self.tokenizer is None:
+            logging.error('Load or fit tokenizer at first!')
+            raise ValueError('Load or fit tokenizer at first!')
+
+        # Process
+        word_seq_train = self.tokenizer.texts_to_sequences(processed_docs_train)
+
+        return word_seq_train
+
+    def words2vec(self, texts, labels, fit=True):
+        """
+        Map raw texts to int vector
+        :param texts: [ [], [],..., [] ]
+        :param labels:[]
+        :param fit: Whether refit the tokenizer
+        :return: texts, labels
+        """
+
+        # process to word
+        texts = self._processing_texts(texts)
+
+        # Load or fit dict()
+        if fit:
+            self._fit_words_dict(texts)
+            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_context_token.pkl")
+        else:
+            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_context_token.pkl")
+        logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
+
+        # words to vector
+        texts = self._tokenizer_words(texts)
+
+        # padding the cols to padding_len
+        texts = sequence.pad_sequences(texts, maxlen=self.padding_len)
+        # trans label to label type
+        labels = to_categorical(labels)
+
+        return texts, labels
+
+
+def pass_finder_context(projs_path: str, source_path: str, out_path):
+    csv_data = pd.read_csv(source_path, index_col=0)
+    # group by project
+    csv_data_by_group = csv_data.groupby('project')
+
+    contexts = []
+    # get context in group (project)
+    for group, group_item in tqdm(csv_data_by_group):
+        project = f"{projs_path}/{group}"
+        locations = group_item['location'].tolist()
+        lines = group_item['line'].tolist()
+
+        archive = zipfile.ZipFile(f'{project}/src.zip', 'r')
+        for line, location in zip(lines, locations):
+            # find text
+            local_location = location.replace("file://", "").split(":")[0][1:]
+            try:
+                texts = archive.read(local_location)
+                texts = texts.decode("utf-8").split('\n')
+            except Exception as e:
+                logging.error(f"Error with read {local_location} : {e}")
+                continue
+            # set index
+            mid_line = line - 1
+            max_line = len(texts)
+            button_line = max(mid_line - 6, 0)
+            top_line = min(mid_line + 6, max_line)
+            # context
+            local_context = texts[button_line:top_line]
+            local_context = ''.join(local_context)
+            local_context = local_context.replace("\r"," ")
+
+            contexts.append([line, location, local_context])
+    contexts = pd.DataFrame(contexts, columns=["line", "location", "context"])
+    # merge context
+    source_csv = pd.read_csv(source_path, index_col=0)
+    out_csv = pd.merge(source_csv,contexts, on=["line", "location"])
+    out_csv.to_csv(out_path)
+
+
+def extract_context_passfinder_all(project_path, language,passorstr):
+    pass_finder_context(
+        project_path,
+        f"csv/{language}/{passorstr}.csv",
+        f"csv/{language}/passFinder_{passorstr}_context.csv"
+    )
+
+
+if __name__ == '__main__':
+    # pass_finder_context(
+    #     '/home/rain/program/python',
+    #     '/home/rain/program/python/pass.csv',
+    #     "/home/rain/PassAna/csv/python/passFinder_pass_context.csv"
+    # )
+
+    # java
+    # pass_finder_context(
+    #     '/home/rain/program/tmp',
+    #     '/home/rain/program/tmp/pass.csv',
+    #     "/home/rain/PassAna/csv/java/passFinder_pass_context.csv"
+    # )
+    # cpp
+    # pass_finder_context(
+    #     '/home/rain/program/cpp',
+    #     '/home/rain/program/cpp/pass.csv',
+    #     "/home/rain/PassAna/csv/cpp/passFinder_pass_context.csv"
+    # )
+    pass_finder_context(
+        '/home/rain/program/csharp',
+        '/home/rain/program/csharp/string.csv',
+        "/home/rain/PassAna/csv/csharp/passFinder_str_context.csv"
+    )
