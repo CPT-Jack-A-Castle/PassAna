@@ -32,30 +32,3 @@ and
 )
 select var.getVariable().getName(), var.getVariable().getInitializer().getLocation(), context
 
-// class GetPass extends DataFlow::ExprNode{
-//     GetPass(){
-//         exists(Variable var, string location, string text|
-//             var = this.asExpr().(VarAccess).getVariable() and location = var.getInitializer().getLocation().toString() and text = var.getName().toString() |
-//             (text+location) in
-//             ["passwordfile:///opt/src/src/test/java/com/alibaba/druid/TestRollBack.java:49:27:49:36"]
-//         )
-//     }
-// }
-
-// class RegularNode extends DataFlow::ExprNode{
-//     RegularNode(){
-//         this.asExpr() instanceof VarAccess or
-//         this.asExpr() instanceof Call
-//     }
-// }
-
-// class DataConfig extends TaintTracking::Configuration {
-//     DataConfig() { this = "<some unique identifier>" }
-//     override predicate isSource(DataFlow::Node nd) {
-//        nd instanceof GetPass
-//     }
-//     override predicate isSink(DataFlow::Node nd) {
-//         nd.asExpr() instanceof Assignment
-//     }
-
-// }

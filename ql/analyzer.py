@@ -38,7 +38,7 @@ class Analyzer(object):
         :param cmd:
         :return:
         """
-        if cmd not in ['context_from', 'context_to', 'findString', 'findPass']:
+        if cmd not in ['context_pass', 'context_str', 'findString', 'findPass']:
             logging.error(f'Not support {cmd}!')
             return
         self.cmd = cmd
@@ -109,25 +109,49 @@ class Analyzer(object):
                 logging.error(f'Error: Can only run queries')
                 return False
 
-    def get_context_for_strs(self, projs_path: str, source_path: str):
+    def get_context_for_strs(self, projs_path: str, source_path: str, skip=True):
         """
         find flow context according to csv file (multiple item)
         :param projs_path: projects path
         :param source_path: string csv file
         :return:
         """
-        self.set_cmd("context_to")
+        self.set_cmd("context_str")
         csv_data = pandas.read_csv(source_path, index_col=0)
         # group by project
         csv_data_by_group = csv_data.groupby('project')
 
         # get context in group (project)
         for group, group_item in tqdm(csv_data_by_group):
-            self.get_context_for_str(projs_path, group, (group_item['var'] + group_item['location']).tolist())
+            logging.info(f"Processing: {group.ljust(50, ' ')}")
+            self.get_context_for_str(projs_path, group,
+                                     (group_item['var'] + group_item['location']).tolist(),
+                                     skip=skip)
             # decode results
             self.decode_bqrs2csv(f"{projs_path}/{group}")
 
-    def get_context_for_str(self, proj_path: str, group: str, group_item: list):
+    def get_context_for_passs(self, projs_path: str, source_path: str, skip=True):
+        """
+            find flow context according to csv file (multiple item)
+            :param projs_path: projects path
+            :param source_path: string csv file
+            :return:
+            """
+        self.set_cmd("context_pass")
+        csv_data = pandas.read_csv(source_path, index_col=0)
+        # group by project
+        csv_data_by_group = csv_data.groupby('project')
+
+        # get context in group (project)
+        for group, group_item in tqdm(csv_data_by_group):
+            logging.info(f"Processing: {group.ljust(50, ' ')}")
+            self.get_context_for_str(projs_path, group,
+                                     (group_item['var'] + group_item['location']).tolist(),
+                                     skip=skip)
+            # decode results
+            self.decode_bqrs2csv(f"{projs_path}/{group}")
+
+    def get_context_for_str(self, proj_path: str, group: str, group_item: list, skip=True):
         """
         ind flow context
         :param proj_path: projs_path: projects path
@@ -150,7 +174,7 @@ class Analyzer(object):
         with open(f'ql/{self.language_type}/{self.cmd}.ql', 'w') as f:
             f.writelines(lines)
 
-        self.run_ql_cmd(complete_path)
+        self.run_ql_cmd(complete_path, skip)
 
     def get_str_from_projects(self, base_path, skip=False, threads=8):
         """
@@ -221,7 +245,10 @@ class Analyzer(object):
                 continue
             # load csv about this project with command "cmd"
             data = Analyzer.load_project_csv(f'{base_path}/{proj_dir}', cmd)
-            data.columns = ["var", 'str', 'line', 'location']
+            if self.cmd in ["findPass", "findString"]:
+                data.columns = ["var", 'str', 'line', 'location']
+            if self.cmd in ["context_str", "context_pass"]:
+                data.columns = ["var", 'location', 'context']
             # add project name
             data['project'] = proj_dir
 
