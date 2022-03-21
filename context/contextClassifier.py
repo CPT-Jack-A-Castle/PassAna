@@ -58,9 +58,9 @@ class ContextClassifier:
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
-            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\context.pkl")
+            self.tokenizer.save_tokenizer("tokenizer/context.pkl")
         else:
-            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\context.pkl")
+            self.tokenizer.load_tokenizer("tokenizer/context.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
         # integer encode the documents
@@ -74,8 +74,8 @@ class ContextClassifier:
 
 
 class CNNClassifierGlove(ContextClassifier, ABC):
-    def __init__(self, padding_len, class_num, glove_dim=50, debug=False):
-        super(CNNClassifierGlove, self).__init__(padding_len, class_num, debug)
+    def __init__(self, padding_len, glove_dim=50, debug=False):
+        super(CNNClassifierGlove, self).__init__(padding_len, debug)
         if glove_dim not in [50, 100, 200, 300]:
             logging.error(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
             raise ValueError(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
@@ -102,7 +102,7 @@ class CNNClassifierGlove(ContextClassifier, ABC):
         model.add(Conv1D(16, 7, activation='relu', padding='same'))
         model.add(GlobalMaxPooling1D())
         model.add(Dropout(0.5))
-        model.add(Dense(self.class_num, activation='sigmoid'))
+        model.add(Dense(2, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         model.summary()
         self.model = model
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     X = np.array(dataset.data['train'][0])
     Y = np.array(dataset.data['train'][1]).round()
 
-    cnnClassifier = CNNClassifierGlove(padding_len=128, class_num=2, glove_dim=50)
+    cnnClassifier = CNNClassifierGlove(padding_len=128, glove_dim=50)
 
     X, Y = cnnClassifier.words2vec(X, Y, fit=False)
     cnnClassifier.get_matrix_6b(f"D:\\program\\glove.6B")

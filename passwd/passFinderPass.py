@@ -99,9 +99,9 @@ class PassFinderPassClassifier(PwdClassifier):
         # Load or fit dict()
         if fit:
             self._fit_words_dict(texts)
-            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_token.pkl")
+            self.tokenizer.save_tokenizer(f"tokenizer/PassFinder_token.pkl")
         else:
-            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_token.pkl")
+            self.tokenizer.load_tokenizer(f"tokenizer/PassFinder_token.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
         # words to vector

@@ -245,7 +245,7 @@ class Analyzer(object):
         self.set_cmd(cmd)
         out = None
         first = True
-        dirs = tqdm(os.listdir(base_path))
+        dirs = os.listdir(base_path)
 
         # explore all dir
         for proj_dir in dirs:
@@ -256,7 +256,11 @@ class Analyzer(object):
             if self.cmd in ["findPass", "findString"]:
                 data.columns = ["var", 'str', 'line', 'location']
             if self.cmd in ["context_str", "context_pass"]:
-                data.columns = ["var", 'location','context']
+                try:
+                    data.columns = ["var", 'location','context']
+                except Exception as e:
+                    data.columns = ["var", 'location','other','context']
+                    data = data[["var", 'location','context']]
             # add project name
             data['project'] = proj_dir
 

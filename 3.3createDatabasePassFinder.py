@@ -1,4 +1,4 @@
 from context.contextTool import merge_and_label
 
 if __name__ == '__main__':
-    merge_and_label('str')
+    merge_and_label('passfinder')

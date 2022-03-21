@@ -55,13 +55,22 @@ def merge_my_context(src, passorstr):
     return merge_out
 
 
+def combine_my_context(src):
+    pass
+
+
 def merge_and_label(myofpassfinder):
+    """
+    merge csv and label
+    :param myofpassfinder:
+    :return:
+    """
     if myofpassfinder == "my":
-        pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')
-        str_context = pd.read_csv('raw_dataset/mycontext_str.csv')
+        pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
+        str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"]
     else:
-        pass_context = pd.read_csv('raw_dataset/passfindercontext_pass.csv')
-        str_context = pd.read_csv('raw_dataset/passfindercontext_str.csv')
+        pass_context = pd.read_csv('raw_dataset/passfindercontext_pass.csv')["context"]
+        str_context = pd.read_csv('raw_dataset/passfindercontext_str.csv')["context"]
 
     data = []
     label = []
@@ -82,10 +91,3 @@ def merge_and_label(myofpassfinder):
     with open(f'dataset/{out_label}_context_label.pkl', 'wb') as f:
         pickle.dump(label, f)
 
-
-if __name__ == '__main__':
-    pass_csv = read_csv_from_projects("/home/rain/program/tmp/pass.csv",
-                                      ["var", 'str', 'line', 'location', 'project'])
-    csv_data = read_csv_from_projects("/home/rain/program/tmp/pass_context_to.csv",
-                                      ['var', 'location', 'context', 'project'])
-    split_context_csv_by_project(pass_csv, csv_data)

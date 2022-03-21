@@ -20,8 +20,8 @@ MAX_NB_WORDS = 100000
 
 
 class PassFinderContextClassifier(PwdClassifier):
-    def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
-        super(PassFinderContextClassifier, self).__init__(padding_len, class_num, debug)
+    def __init__(self, padding_len, embedding_dim=50, debug=False):
+        super(PassFinderContextClassifier, self).__init__(padding_len, debug)
         self.embedding_dim = embedding_dim
 
     def create_model(self):
@@ -37,8 +37,8 @@ class PassFinderContextClassifier(PwdClassifier):
         model.add(Dense(64, activation='relu'))
         model.add(Conv1D(16, 8, activation='relu', padding="same"))
         model.add(Flatten())
-        model.add(Dense(self.class_num, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=["acc",
+        model.add(Dense(2, activation='softmax'))
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=["acc",
                                                                                   keras.metrics.Precision(),
                                                                                   keras.metrics.Recall()])
         model.summary()
@@ -93,9 +93,9 @@ class PassFinderContextClassifier(PwdClassifier):
         # Load or fit dict()
         if fit:
             self._fit_words_dict(texts)
-            self.tokenizer.save_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_context_token.pkl")
+            self.tokenizer.save_tokenizer(f"tokenizer/PassFinder_context_token.pkl")
         else:
-            self.tokenizer.load_tokenizer(f"D:\\program\\PassAna\\tokenizer\\PassFinder_context_token.pkl")
+            self.tokenizer.load_tokenizer(f"tokenizer/PassFinder_context_token.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
         # words to vector
