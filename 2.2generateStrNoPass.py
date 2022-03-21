@@ -3,6 +3,9 @@ import pandas as pd
 
 
 if __name__ == '__main__':
+    """
+    合并生成常规的str，即不包含password 的纯粹的str
+    """
     src = "/home/rain/PassAna/csv"
     dirs = os.listdir(src)
     init_data = pd.DataFrame(columns=['str'])

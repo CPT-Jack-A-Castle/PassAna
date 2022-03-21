@@ -133,9 +133,9 @@ def merge_and_label():
         data.extend(p)
     data = pd.DataFrame(data, dtype=str)
     label = pd.DataFrame(label, dtype=int)
-    with open('dataset/data.pkl', 'wb') as f:
+    with open('dataset/pwd_data.pkl', 'wb') as f:
         pickle.dump(data, f)
-    with open('dataset/label.pkl', 'wb') as f:
+    with open('dataset/pwd_label.pkl', 'wb') as f:
         pickle.dump(label, f)
 
 

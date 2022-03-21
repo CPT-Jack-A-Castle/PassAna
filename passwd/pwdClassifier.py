@@ -5,11 +5,10 @@ from abc import abstractmethod
 
 import nltk
 import numpy as np
-from datasets import load_dataset
 from keras.layers import Dense, GlobalAveragePooling1D, Flatten, Conv2D, Conv1D, MaxPooling1D, GlobalMaxPooling1D, \
     Dropout
 from keras.layers import Embedding
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.preprocessing import sequence
 from keras.utils.np_utils import to_categorical
 from keras_preprocessing.sequence import pad_sequences
@@ -50,6 +49,12 @@ class PwdClassifier:
                        epochs=epochs, batch_size=batch_size,
                        validation_data=(valid[0], valid[1]),
                        shuffle=True)
+
+    def save_model(self, src):
+        self.model.save(f"{src}")
+
+    def load_model(self, src):
+        self.model = load_model(f"{src}")
 
 
 class FastTextPwdClassifier(PwdClassifier):

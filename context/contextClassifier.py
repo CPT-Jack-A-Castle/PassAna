@@ -2,6 +2,7 @@ import logging
 from abc import abstractmethod, ABC
 
 import numpy as np
+import pandas as pd
 from datasets import load_dataset
 from keras.layers import Dense, Conv1D, GlobalMaxPooling1D, MaxPooling1D, Dropout
 from keras.layers import Embedding

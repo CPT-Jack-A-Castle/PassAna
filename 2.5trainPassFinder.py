@@ -14,8 +14,8 @@ if __name__ == '__main__':
     # x_train = np.random.randint(100,size=(1200,100))
     # y_train = np.random.randint(100,size=(1200,1))
 
-    X = load_csv('./dataset/data.pkl').to_numpy().reshape(-1)
-    Y = load_csv('./dataset/label.pkl').to_numpy().reshape(-1)
+    X = load_csv('./dataset/pwd_data.pkl').to_numpy().reshape(-1)
+    Y = load_csv('./dataset/pwd_label.pkl').to_numpy().reshape(-1)
 
     passFinderClassifier = PassFinderPassClassifier(padding_len=128, class_num=4)
 

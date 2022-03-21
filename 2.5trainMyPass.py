@@ -18,8 +18,8 @@ def load_csv(src):
 
 
 def pwdNgram():
-    X = load_csv('./dataset/data.pkl').to_numpy().reshape(-1)
-    Y = load_csv('./dataset/label.pkl').to_numpy().reshape(-1)
+    X = load_csv('./dataset/pwd_data.pkl').to_numpy().reshape(-1)
+    Y = load_csv('./dataset/pwd_label.pkl').to_numpy().reshape(-1)
 
     ngramPwdClassifier = NgramPwdClassifier(padding_len=128, class_num=4)
 
@@ -35,6 +35,7 @@ def pwdNgram():
     ngramPwdClassifier.create_model()
     ngramPwdClassifier.run(train_data, valid_data, epochs=100, batch_size=128)
 
+    ngramPwdClassifier.save()
 
 def pwdNlp():
     dataset = pd.read_csv('raw_dataset/rockyou.txt',
@@ -59,19 +60,11 @@ def pwdNlp():
 def classifier():
     md5Predictor = HASHPwdClassifier(padding_len=128, class_num=3)
 
-    positive_data = np.load('./dataset/pwd.npy')
-    positive_label = np.ones(positive_data.shape[0])
+    X = load_csv('./dataset/data.pkl').to_numpy().reshape(-1)
+    Y = load_csv('./dataset/label.pkl').to_numpy().reshape(-1)
 
-    negative_data = np.load('./dataset/randstr.npy')
-    negative_label = np.zeros(negative_data.shape[0])
-
-    X = np.r_[positive_data, negative_data]
-    # X = HASHPwdClassifier.data2NNform(data)
-    label = np.r_[positive_label, negative_label]
-    Y = to_categorical(label)
+    Y = to_categorical(Y)
     train_data, valid_data = train_valid_split(X, Y)
-
-
     md5Predictor.create_model()
 
     md5Predictor.run(train_data, valid_data, epochs=100, batch_size=128)

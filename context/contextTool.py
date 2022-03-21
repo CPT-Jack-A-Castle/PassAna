@@ -1,6 +1,9 @@
+import os
+import pickle
+
 import pandas as pd
 from tqdm import tqdm
-
+import numpy as np
 
 def read_csv_from_projects(src, header):
     """
@@ -37,6 +40,47 @@ def _concat_context(data):
     return pd.Series({
         "context": ";".join(data["context"].unique())
     })
+
+
+def merge_my_context(src, passorstr):
+    dirs = os.listdir(src)
+
+    merge_out = pd.DataFrame(columns=["var", "str","line","location","project","context"])
+    # explore all dir
+    for proj_dir in dirs:
+        if not os.path.exists(f'{src}/{proj_dir}/mycontext_{passorstr}.csv'):
+            continue
+        data = pd.read_csv(f'{src}/{proj_dir}/mycontext_{passorstr}.csv', index_col=0)
+        merge_out = pd.concat([merge_out, data])
+    return merge_out
+
+
+def merge_and_label(myofpassfinder):
+    if myofpassfinder == "my":
+        pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')
+        str_context = pd.read_csv('raw_dataset/mycontext_str.csv')
+    else:
+        pass_context = pd.read_csv('raw_dataset/passfindercontext_pass.csv')
+        str_context = pd.read_csv('raw_dataset/passfindercontext_str.csv')
+
+    data = []
+    label = []
+    for i, p in enumerate([pass_context, str_context]):
+        p = p.dropna()
+        p = p.to_numpy().reshape(-1).tolist()
+        label.extend(np.zeros(len(p), dtype=int) + i)
+        data.extend(p)
+    data = pd.DataFrame(data, dtype=str)
+    label = pd.DataFrame(label, dtype=int)
+    if myofpassfinder == "my":
+        out_label = "my"
+    else:
+        out_label = "passfinder"
+
+    with open(f'dataset/{out_label}_context_data.pkl', 'wb') as f:
+        pickle.dump(data, f)
+    with open(f'dataset/{out_label}_context_label.pkl', 'wb') as f:
+        pickle.dump(label, f)
 
 
 if __name__ == '__main__':

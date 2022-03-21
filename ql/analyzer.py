@@ -7,6 +7,7 @@ import re
 import pandas
 import pandas as pd
 import pexpect
+import shutil
 from tqdm import tqdm
 
 
@@ -95,19 +96,26 @@ class Analyzer(object):
               f"--format=csv --output={src}/result.csv --rerun --threads {threads}"
 
         # background running
-        self._ql_task = pexpect.spawn(cmd, timeout=300)
-        while True:
-            line = self._ql_task.readline().decode()
-            logging.debug(line)
-            if line.startswith('Interpreting results'):
-                logging.info(f'Interpreting results')
-                return True
-            if line.startswith('A fatal error'):
-                logging.error(f'A fatal error')
-                return False
-            if line.startswith('Error: Can only run queries'):
-                logging.error(f'Error: Can only run queries')
-                return False
+        try:
+            self._ql_task = pexpect.spawn(cmd, timeout=300)
+
+            while True:
+                line = self._ql_task.readline().decode()
+                logging.debug(line)
+                if line.startswith('Interpreting results'):
+                    logging.info(f'Interpreting results')
+                    return True
+                if line.startswith('A fatal error'):
+                    logging.error(f'A fatal error')
+                    return False
+                if line.startswith('Error: Can only run queries'):
+                    logging.error(f'Error: Can only run queries')
+                    return False
+        except Exception as e:
+            logging.info(f"Timeout with {e}")
+            shutil.rmtree(src)
+            logging.info(f"Remove dir {src}")
+            return False
 
     def get_context_for_strs(self, projs_path: str, source_path: str, skip=True):
         """
@@ -248,7 +256,7 @@ class Analyzer(object):
             if self.cmd in ["findPass", "findString"]:
                 data.columns = ["var", 'str', 'line', 'location']
             if self.cmd in ["context_str", "context_pass"]:
-                data.columns = ["var", 'location', 'context']
+                data.columns = ["var", 'location','context']
             # add project name
             data['project'] = proj_dir
 

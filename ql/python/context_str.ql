@@ -24,7 +24,7 @@ and
         context =  method.getMethodName()
     )
 )
-select var.getId(),var.getLocation().toString(), var.getScope().toString(), context
+select var.getId(),var.getLocation().toString(), var.getScope().toString() + context
 
 
 // //	/opt/src/tripleo_ansible/tests/plugins/filter/test_helpers.py:380

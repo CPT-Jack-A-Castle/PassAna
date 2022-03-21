@@ -1,20 +1,14 @@
 import hashlib
 import logging
-import sys
-from abc import abstractmethod
+import os.path
+import re
+
 import zipfile
-import nltk
-import numpy as np
-from datasets import load_dataset
-from keras import metrics
 from keras.layers import Dense, GlobalAveragePooling1D, Flatten, Conv2D, Conv1D, MaxPooling1D, GlobalMaxPooling1D, \
     Dropout
-from keras.layers import Embedding
 from keras.models import Sequential
 from keras.preprocessing import sequence
 from keras.utils.np_utils import to_categorical
-from keras_preprocessing.sequence import pad_sequences
-from keras_preprocessing.text import text_to_word_sequence
 from tensorflow import keras
 from tqdm import tqdm
 import pandas as pd
@@ -115,6 +109,34 @@ class PassFinderContextClassifier(PwdClassifier):
         return texts, labels
 
 
+def merge_passfinder_context(src, passorstr):
+    dirs = os.listdir(src)
+
+    merge_out = pd.DataFrame(columns=["var","str","line","location","project","context"])
+    # explore all dir
+    for proj_dir in dirs:
+        data = pd.read_csv(f'{src}/{proj_dir}/passFinder_{passorstr}_context.csv', index_col=0)
+        data = _process_text(data)
+        merge_out = pd.concat([merge_out, data])
+    return merge_out
+
+
+def _process_text(data: pd.DataFrame):
+    data = data.dropna()
+    data["context"] = data["context"].apply(_reduce_space)
+    return data
+
+
+def _reduce_space(text):
+    try:
+        cop = re.compile("[^\u4e00-\u9fa5^a-z^A-Z]")
+        tmp_text = cop.sub(" ", text)
+        out_text = " ".join(tmp_text.split())
+    except Exception as e:
+        print()
+    return out_text
+
+
 def pass_finder_context(projs_path: str, source_path: str, out_path):
     csv_data = pd.read_csv(source_path, index_col=0)
     # group by project
@@ -127,6 +149,10 @@ def pass_finder_context(projs_path: str, source_path: str, out_path):
         locations = group_item['location'].tolist()
         lines = group_item['line'].tolist()
 
+        if not os.path.exists(f'{project}/src.zip'):
+            logging.info(f"{project} not esixt")
+            continue
+
         archive = zipfile.ZipFile(f'{project}/src.zip', 'r')
         for line, location in zip(lines, locations):
             # find text
@@ -138,7 +164,7 @@ def pass_finder_context(projs_path: str, source_path: str, out_path):
                 logging.error(f"Error with read {local_location} : {e}")
                 continue
             # set index
-            mid_line = line - 1
+            mid_line = int(line) - 1
             max_line = len(texts)
             button_line = max(mid_line - 6, 0)
             top_line = min(mid_line + 6, max_line)
@@ -155,13 +181,12 @@ def pass_finder_context(projs_path: str, source_path: str, out_path):
     out_csv.to_csv(out_path)
 
 
-def extract_context_passfinder_all(project_path, language,passorstr):
+def extract_context_passfinder_all(project_path, language, passorstr):
     pass_finder_context(
         project_path,
         f"csv/{language}/{passorstr}.csv",
-        f"csv/{language}/passFinder_{passorstr}_context.csv"
+        f"csv/{language}/passFindercontext_{passorstr}.csv"
     )
-
 
 if __name__ == '__main__':
     # pass_finder_context(
