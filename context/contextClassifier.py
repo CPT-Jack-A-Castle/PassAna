@@ -1,5 +1,6 @@
 import logging
 from abc import abstractmethod, ABC
+from re import finditer
 
 import numpy as np
 import pandas as pd
@@ -14,6 +15,10 @@ from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding
 
 MAX_NB_WORDS = 10000
 
+
+def camel_case_split(identifier):
+    matches = finditer('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)', identifier)
+    return [m.group(0) for m in matches]
 
 class ContextClassifier:
     def __init__(self, padding_len, class_num, debug=False):
@@ -55,6 +60,10 @@ class ContextClassifier:
         :return: texts, labels
         """
         logging.info("pre-processing train data...")
+        for i in range(len(texts)):
+            tmp_text = texts[i].replace(".", " ").replace(";"," ").replace("_"," ")
+            tmp_text = camel_case_split(tmp_text)
+            texts[i] = " ".join(tmp_text)
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
@@ -65,13 +74,39 @@ class ContextClassifier:
 
         # integer encode the documents
         encoded_docs = self.tokenizer.texts_to_sequences(texts)
-        # pad documents to a max length of 4 words
+        # pad documents to a max length of 128 words
         texts = pad_sequences(encoded_docs, maxlen=self.padding_len, padding='post')
         # trans label to label type
         labels = to_categorical(labels)
 
         return texts, labels
 
+    def words2vec_generator(self, texts, fit=True):
+        """
+        Map raw texts to int vector
+        :param texts: [ [], [],..., [] ]
+        :param fit: Whether refit the tokenizer
+        :return: texts, labels
+        """
+        logging.info("pre-processing train data...")
+        for i in range(len(texts)):
+            tmp_text = texts[i].replace(".", " ").replace(";"," ").replace("_"," ")
+            tmp_text = camel_case_split(tmp_text)
+            texts[i] = " ".join(tmp_text)
+
+        if fit:
+            self.tokenizer.fit_on_texts(texts)
+            self.tokenizer.save_tokenizer("tokenizer/generator.pkl")
+        else:
+            self.tokenizer.load_tokenizer("tokenizer/generator.pkl")
+        logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
+
+        # integer encode the documents
+        encoded_docs = self.tokenizer.texts_to_sequences(texts)
+        # pad documents to a max length of 128 words
+        texts = pad_sequences(encoded_docs, maxlen=self.padding_len, padding='post')
+
+        return texts
 
 class CNNClassifierGlove(ContextClassifier, ABC):
     def __init__(self, padding_len, glove_dim=50, debug=False):
@@ -137,7 +172,7 @@ if __name__ == '__main__':
 
     cnnClassifier = CNNClassifierGlove(padding_len=128, glove_dim=50)
 
-    X, Y = cnnClassifier.words2vec(X, Y, fit=False)
+    X, Y = cnnClassifier.words2vec_generator(X, Y, fit=False)
     cnnClassifier.get_matrix_6b(f"D:\\program\\glove.6B")
 
     train_data, valid_data = train_valid_split(X, Y)

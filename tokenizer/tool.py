@@ -15,6 +15,9 @@ class MyTokenizer(object):
     def fit_on_texts(self, processed_docs_train):
         return self.tokenizer.fit_on_texts(processed_docs_train)
 
+    def decode_vectors(self, vectors):
+        return self.tokenizer.sequences_to_texts(vectors)
+
     def vocab_size(self):
         return len(self.tokenizer.word_index) + 1
 

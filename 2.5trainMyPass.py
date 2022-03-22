@@ -10,7 +10,7 @@ from tokenizer.tool import train_valid_split
 
 
 def load_pkl(src):
-    with open(src,'rb') as f:
+    with open(src, 'rb') as f:
         data = pickle.load(f)
     return data
 
@@ -28,7 +28,7 @@ def pwdNgram():
 
     train_data, valid_data = [X, np.array(Y, dtype=int)], [X_t, np.array(Y_t, dtype=int)]
 
-    #train_data, valid_data = train_valid_split(X, Y)
+    # train_data, valid_data = train_valid_split(X, Y)
 
     ngramPwdClassifier.create_model()
     ngramPwdClassifier.run(train_data, valid_data, epochs=100, batch_size=128)
