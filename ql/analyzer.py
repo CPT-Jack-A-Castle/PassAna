@@ -17,7 +17,7 @@ class Analyzer(object):
         # Analyze task handle
         self._analyze_task = None
         # Ql select task handle
-        self._ql_task = None
+        self._ql_task: pexpect.spawn = None
         # Language Type
         self.language_type = None
         # default cmd
@@ -97,14 +97,22 @@ class Analyzer(object):
 
         # background running
         try:
-            self._ql_task = pexpect.spawn(cmd, timeout=300)
+            self._ql_task = pexpect.spawn(cmd, timeout=180)
 
             while True:
                 line = self._ql_task.readline().decode()
                 logging.debug(line)
                 if line.startswith('Interpreting results'):
                     logging.info(f'Interpreting results')
+
+                    # Result of csharp named java? The fact is that. I think it is a bug.
+                    if self.language_type == "csharp" and os.path.exists(
+                            f'{src}/results/getting-started/codeql-extra-queries-java'):
+                        os.rename(f'{src}/results/getting-started/codeql-extra-queries-java',
+                                  f'{src}/results/getting-started/codeql-extra-queries-csharp')
+
                     return True
+
                 if line.startswith('A fatal error'):
                     logging.error(f'A fatal error')
                     return False
@@ -257,10 +265,10 @@ class Analyzer(object):
                 data.columns = ["var", 'str', 'line', 'location']
             if self.cmd in ["context_str", "context_pass"]:
                 try:
-                    data.columns = ["var", 'location','context']
+                    data.columns = ["var", 'location', 'context']
                 except Exception as e:
-                    data.columns = ["var", 'location','other','context']
-                    data = data[["var", 'location','context']]
+                    data.columns = ["var", 'location', 'other', 'context']
+                    data = data[["var", 'location', 'context']]
             # add project name
             data['project'] = proj_dir
 

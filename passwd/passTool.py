@@ -8,10 +8,9 @@ import string
 import numpy as np
 import scipy
 from scipy import stats
-from password_generator import PasswordGenerator
 from tqdm import tqdm
-
 import pandas as pd
+from password_generator import PasswordGenerator
 
 class RandomPasGeneratorLocal(object):
     def __init__(self):
