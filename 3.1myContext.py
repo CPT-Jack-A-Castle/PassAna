@@ -5,10 +5,10 @@ import pandas as pd
 
 if __name__ == '__main__':
     language = 'csharp'
-    base = f'/home/gonghuihui/pwd_proj/{language}_database'
-    for str_label in ['pass', 'string']:
+    base = f'/media/rain/data/csharp_zip'
+    for str_label in ['string']:
         analyzer = init_analyzer(language)
-        # analyzer.get_context_for_strs(base, f'csv/{language}/{str_label}.csv', skip=True)
+        analyzer.get_context_for_strs(base, f'csv/{language}/{str_label}.csv', skip=True)
         if str_label == "string":
             context_to = analyzer.merge_csv(base, 'context_str')
         else:

@@ -3,9 +3,9 @@ from ql.analyzer import init_analyzer
 
 if __name__ == '__main__':
     language = 'csharp'
-    base = '/home/gonghuihui/pwd_proj/csharp_database'
+    base = '/media/rain/data/csharp_zip'
     analyzer = init_analyzer(language)
-    analyzer.get_pass_from_projects(base, threads=8, skip=True)
+    analyzer.get_pass_from_projects(base, threads=8, skip=False)
     data = analyzer.merge_csv(base, "findPass")
 
     data.to_csv(f'csv/{language}/pass.csv')

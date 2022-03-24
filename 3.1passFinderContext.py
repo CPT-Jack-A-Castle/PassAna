@@ -2,7 +2,7 @@ from context.passFinderContext import extract_context_passfinder_all, merge_pass
 
 if __name__ == '__main__':
     language = 'csharp'
-    base = f'/home/gonghuihui/pwd_proj/{language}_database'
+    base = f'/media/rain/data/csharp_zip'
     extract_context_passfinder_all(
         base,
         language,

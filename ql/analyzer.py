@@ -9,7 +9,7 @@ import pandas as pd
 import pexpect
 import shutil
 from tqdm import tqdm
-import eventlet
+
 
 class Analyzer(object):
 
@@ -99,11 +99,10 @@ class Analyzer(object):
         try:
             self._ql_task = pexpect.spawn(cmd, timeout=180)
             while True:
-                # if not self._ql_task.isalive():
-                #     logging.info(f"Timeout")
-                #     shutil.rmtree(src)
-                #     return False
-
+                if not self._ql_task.isalive():
+                    logging.info(f"Timeout")
+                    shutil.rmtree(src)
+                    return False
                 line = self._ql_task.readline().decode()
                 logging.debug(line)
                 if line.startswith('Interpreting results'):
@@ -128,7 +127,7 @@ class Analyzer(object):
         except Exception as e:
             logging.info(f"Timeout with {e}")
             # shutil.rmtree(src)
-            logging.info(f"Remove dir {src}")
+            # logging.info(f"Remove dir {src}")
             return False
 
     def get_context_for_strs(self, projs_path: str, source_path: str, skip=True):
@@ -323,6 +322,14 @@ class Analyzer(object):
         :param src:
         :return: result
         """
+        if self.language_type == "csharp":
+            if not os.path.exists(f'{src}/results/getting-started/codeql-extra-queries-csharp'):
+                os.mkdir(f'{src}/results/getting-started/codeql-extra-queries-csharp')
+            if os.path.exists(f'{src}/results/getting-started/codeql-extra-queries-java'):
+                os.system(f'mv -f {src}/results/getting-started/codeql-extra-queries-java/* '
+                          f'{src}/results/getting-started/codeql-extra-queries-csharp/')
+                shutil.rmtree(f'{src}/results/getting-started/codeql-extra-queries-java')
+
         path = f"{src}/results/" \
                f"getting-started/codeql-extra-queries-{self.language_type}/{self.cmd}.bqrs"
         if not os.path.exists(path):
