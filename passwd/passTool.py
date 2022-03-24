@@ -57,7 +57,7 @@ def process_found_pass(src):
     :return:
     """
     data = pd.read_csv(f"{src}/pass.csv",
-                       on_bad_lines='skip',
+                       # on_bad_lines='skip',
                        index_col=0)
     # which has " "(space)
     data = data[(data['str'].str.find(' ') == -1)]

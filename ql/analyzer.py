@@ -9,7 +9,7 @@ import pandas as pd
 import pexpect
 import shutil
 from tqdm import tqdm
-
+import eventlet
 
 class Analyzer(object):
 
@@ -98,30 +98,36 @@ class Analyzer(object):
         # background running
         try:
             self._ql_task = pexpect.spawn(cmd, timeout=180)
-
             while True:
+                # if not self._ql_task.isalive():
+                #     logging.info(f"Timeout")
+                #     shutil.rmtree(src)
+                #     return False
+
                 line = self._ql_task.readline().decode()
                 logging.debug(line)
                 if line.startswith('Interpreting results'):
                     logging.info(f'Interpreting results')
 
-                    # Result of csharp named java? The fact is that. I think it is a bug.
-                    if self.language_type == "csharp" and os.path.exists(
-                            f'{src}/results/getting-started/codeql-extra-queries-java'):
-                        os.rename(f'{src}/results/getting-started/codeql-extra-queries-java',
-                                  f'{src}/results/getting-started/codeql-extra-queries-csharp')
-
+                    # Result of csharp named java? That is a fact. I think it is a bug.
+                    if self.language_type == "csharp":
+                        if not os.path.exists(f'{src}/results/getting-started/codeql-extra-queries-csharp'):
+                            os.mkdir(f'{src}/results/getting-started/codeql-extra-queries-csharp')
+                        if os.path.exists(f'{src}/results/getting-started/codeql-extra-queries-java'):
+                            os.system(f'mv -f {src}/results/getting-started/codeql-extra-queries-java/* '
+                                      f'{src}/results/getting-started/codeql-extra-queries-csharp/')
+                            shutil.rmtree(f'{src}/results/getting-started/codeql-extra-queries-java')
                     return True
-
                 if line.startswith('A fatal error'):
                     logging.error(f'A fatal error')
                     return False
                 if line.startswith('Error: Can only run queries'):
                     logging.error(f'Error: Can only run queries')
                     return False
+
         except Exception as e:
             logging.info(f"Timeout with {e}")
-            shutil.rmtree(src)
+            # shutil.rmtree(src)
             logging.info(f"Remove dir {src}")
             return False
 

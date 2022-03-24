@@ -4,7 +4,7 @@ import pandas as pd
 
 
 if __name__ == '__main__':
-    language = 'cpp'
+    language = 'csharp'
     base = f'/home/gonghuihui/pwd_proj/{language}_database'
     for str_label in ['pass', 'string']:
         analyzer = init_analyzer(language)
