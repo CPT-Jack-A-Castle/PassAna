@@ -28,6 +28,8 @@ def split_context_csv_by_project(csv_str: pd.DataFrame, csv_context: pd.DataFram
 
     merge_csv = pd.merge(csv_str, csv_data_by_group, on=['var', 'location'], how='outer')
 
+    merge_csv = merge_csv.dropna()
+
     return merge_csv
 
 

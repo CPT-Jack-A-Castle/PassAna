@@ -9,9 +9,9 @@ import csharp
 
 
 from VariableAccess var, VariableAccess other, Call call,  string str, string context
-where str = var.getTarget().getName() + var.getTarget().getInitializer().getLocation().toString() and
-str in
-["_sConnect/opt/src/WsBenchmark/Controllers/InterController.cs:12:24:12:32"]
+where str = var.getTarget().getName() + var.getTarget().getInitializer().getLocation().toString()
+and str in
+["mRemoteServer/opt/src/Source/MSBuild.Community.Tasks.Tests/IIS/WebDirectoryCreateTest.cs:17:34:17:41"]
 and
 (
     (
@@ -24,4 +24,4 @@ and
     )
 
 )
-select var, var.getTarget().getInitializer().getLocation(), context
+select var.getTarget().getName(), var.getTarget().getInitializer().getLocation(), context

@@ -24,4 +24,4 @@ and
     )
 
 )
-select var, var.getTarget().getInitializer().getLocation(), context
+select var.getTarget().getName(), var.getTarget().getInitializer().getLocation(), context

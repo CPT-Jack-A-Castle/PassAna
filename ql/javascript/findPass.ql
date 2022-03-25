@@ -19,8 +19,7 @@ namestr.regexpMatch("\\w*auth\\w*") or
 namestr.regexpMatch("\\w*host\\w*") or
 namestr.regexpMatch("\\w*server\\w*") or
 namestr.regexpMatch("\\w*username\\w*") or
-namestr.regexpMatch("\\w*account\\w*") or
-contentstr.regexpMatch("\\w*com\\w*")
+namestr.regexpMatch("\\w*account\\w*")
 )
 
 select namestr , contentstr, assign.getLocation().getStartLine(), assign.getLocation()

@@ -115,7 +115,9 @@ def merge_passfinder_context(src, passorstr):
     merge_out = pd.DataFrame(columns=["var","str","line","location","project","context"])
     # explore all dir
     for proj_dir in dirs:
-        data = pd.read_csv(f'{src}/{proj_dir}/passFinder_{passorstr}_context.csv', index_col=0)
+        if not os.path.exists(f'{src}/{proj_dir}/passFindercontext_{passorstr}.csv'):
+            continue
+        data = pd.read_csv(f'{src}/{proj_dir}/passFindercontext_{passorstr}.csv', index_col=0)
         data = _process_text(data)
         merge_out = pd.concat([merge_out, data])
     return merge_out
@@ -156,7 +158,7 @@ def pass_finder_context(projs_path: str, source_path: str, out_path):
         archive = zipfile.ZipFile(f'{project}/src.zip', 'r')
         for line, location in zip(lines, locations):
             # find text
-            local_location = location.replace("file://", "").split(":")[0][1:]
+            local_location = location.replace("file://", "").split(":")[0]# [1:]
             try:
                 texts = archive.read(local_location)
                 texts = texts.decode("utf-8").split('\n')
