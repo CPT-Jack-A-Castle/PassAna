@@ -1,5 +1,6 @@
 # PassAna
 更新日志：
+22-03-31 调整模型训练的架构，修复部分bug。增加GAN网络来生成Context
 
 22-03-16 优化部分代码结构，支持cpp python java JavaScript csharp
 

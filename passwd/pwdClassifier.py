@@ -237,7 +237,7 @@ class HASHPwdClassifier(PwdClassifier):
 class NgramPwdClassifier(PwdClassifier):
     def __init__(self, padding_len, class_num, glove_dim=50, debug=False):
         super(NgramPwdClassifier, self).__init__(padding_len, class_num, debug)
-        self.tokenizer: MyTokenizer = MyTokenizer()
+        self.tokenizer: MyTokenizer = MyTokenizer(filters='')
         if glove_dim not in [50, 100, 200, 300]:
             logging.error(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
             raise ValueError(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
@@ -254,16 +254,23 @@ class NgramPwdClassifier(PwdClassifier):
         model = Sequential()
         model.add(Embedding(self.tokenizer.vocab_size(), self.glove_dim,
                             weights=[self.embedding_matrix], input_length=self.padding_len, trainable=False))
-        model.add(Conv1D(16, 7, activation='relu', padding='same'))
-        model.add(MaxPooling1D(2))
-        model.add(Conv1D(16, 7, activation='relu', padding='same'))
-        model.add(GlobalMaxPooling1D())
-        model.add(Dropout(0.5))
-        model.add(Dense(self.class_num, activation='sigmoid'))
-        model.compile(loss="mean_squared_error",
-                      optimizer="Adam", metrics=["accuracy", "mse"])
+        # model.add(Conv1D(64, 32, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
+        model.add(Dense(64, activation='relu'))
+        model.add(Conv1D(32, 16, activation='relu', padding="same"))
+        model.add(Dense(64, activation='relu'))
+        model.add(Conv1D(16, 8, activation='relu', padding="same"))
+        model.add(Flatten())
+        model.add(Dense(self.class_num, activation='softmax'))
+        model.compile(loss="categorical_crossentropy",
+                      optimizer="Adam", metrics=["accuracy"])
         model.summary()
         self.model = model
+
+    def _fit_words_dict(self, processed_docs_train):
+        logging.info("Tokenizing input data...")
+        tokenizer = MyTokenizer(num_words=MAX_NB_WORDS, lower=False, char_level=False)
+        tokenizer.fit_on_texts(processed_docs_train)
+        self.tokenizer = tokenizer
 
     def words2vec(self, texts, labels, n=4, fit=True):
         """
@@ -279,7 +286,7 @@ class NgramPwdClassifier(PwdClassifier):
         words = []
         for text in tqdm(texts):
             try:
-                tmp = set([text[x:x + y] for y in range(1, n) for x in range(0, len(text))])
+                tmp = [text[x:x + y] for y in range(1, n) for x in range(0, len(text))]
                 words.append(list(tmp))
             except Exception as e:
                 logging.error(f"'{text}' error with {e}")
@@ -287,7 +294,7 @@ class NgramPwdClassifier(PwdClassifier):
 
         # Fit the tokenizer
         if fit:
-            self.tokenizer.fit_on_texts(words)
+            self._fit_words_dict(words)
             self.tokenizer.save_tokenizer(f"./tokenizer/pwd.pkl")
         else:
             self.tokenizer.load_tokenizer(f"./tokenizer/pwd.pkl")
@@ -296,7 +303,7 @@ class NgramPwdClassifier(PwdClassifier):
         # integer encode the documents
         encoded_docs = self.tokenizer.texts_to_sequences(texts)
         # pad documents to a max length of 4 words
-        texts = pad_sequences(encoded_docs, maxlen=self.padding_len, padding='post')
+        texts = pad_sequences(encoded_docs, maxlen=self.padding_len)
         # trans label to label type
         labels = to_categorical(labels)
 

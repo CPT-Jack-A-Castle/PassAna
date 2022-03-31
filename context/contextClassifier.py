@@ -141,7 +141,7 @@ class CNNClassifierGlove(ContextClassifier, ABC):
         model.add(MaxPooling1D(2))
         model.add(Conv1D(16, 7, activation='relu', padding='same'))
         model.add(GlobalMaxPooling1D())
-        model.add(Dropout(0.5))
+        model.add(Dropout(0.2))
         model.add(Dense(2, activation='sigmoid'))
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         model.summary()

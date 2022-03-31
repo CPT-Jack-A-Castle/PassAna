@@ -44,9 +44,8 @@ class PassFinderPassClassifier(PwdClassifier):
         model.add(Conv1D(16, 8, activation='relu', padding="same"))
         model.add(Flatten())
         model.add(Dense(self.class_num, activation='softmax'))
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=["acc",
-                                                                                  keras.metrics.Precision(),
-                                                                                  keras.metrics.Recall()])
+        model.compile(loss="categorical_crossentropy",
+                      optimizer="Adam", metrics=["accuracy"])
         model.summary()
         self.model = model
 

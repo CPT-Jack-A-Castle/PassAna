@@ -81,6 +81,7 @@ def generate_random_pass(num):
     """
     passwords = []
     pwo = PasswordGenerator()
+    pwo.maxlen = 20
     for i in tqdm(range(num)):
         passwords.append(pwo.generate())
     passwords = pd.DataFrame(passwords)
@@ -119,15 +120,19 @@ def remove_pass_from_string(src):
 
 def merge_and_label():
     nopass_str = pd.read_csv('raw_dataset/nopass_str.csv')
-    randowm_pass = pd.read_csv('raw_dataset/random_pass.csv', chunksize=100000).get_chunk(100000)
-    user_pass = pd.read_csv('raw_dataset/password.csv', chunksize=100000).get_chunk(100000)
-    tokens = pd.read_csv('raw_dataset/tokens.csv', chunksize=100000).get_chunk(100000)
+    randowm_pass = pd.read_csv('raw_dataset/random_pass.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
+    user_pass = pd.read_csv('raw_dataset/password.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
+    tokens = pd.read_csv('raw_dataset/tokens.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
 
     data = []
     label = []
-    for i, p in enumerate([randowm_pass, user_pass, nopass_str, tokens]):
+    for i, p in enumerate([nopass_str, randowm_pass, user_pass, tokens]):
         p = p.dropna()
         p = p.to_numpy().reshape(-1).tolist()
+        # if i == 1:
+        #     label.extend(np.zeros(len(p), dtype=int))
+        # else:
+        #     label.extend(np.ones(len(p), dtype=int))
         label.extend(np.zeros(len(p), dtype=int) + i)
         data.extend(p)
     data = pd.DataFrame(data, dtype=str)

@@ -30,7 +30,8 @@ def generator(num, train=True):
         gan.load_generator()
         return gan.generator_texts(num)
 
+
 if __name__ == '__main__':
-    gen_pass_context = generator(1000, False)
+    gen_pass_context = generator(1000, True)
     gen_pass_context = pd.DataFrame(gen_pass_context,columns=['context'])
     gen_pass_context.to_csv('raw_dataset/mycontext_pass_gen.csv', index=False)
