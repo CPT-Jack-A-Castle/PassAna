@@ -31,16 +31,14 @@ class PassFinderContextClassifier(PwdClassifier):
         """
         logging.info("Create Model...")
         model = Sequential()
-        model.add(Conv1D(64, 32, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
+        model.add(Conv1D(32, 16, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
         model.add(Dense(64, activation='relu'))
-        model.add(Conv1D(32, 16, activation='relu', padding="same"))
+        model.add(Conv1D(16, 16, activation='relu', padding="same"))
         model.add(Dense(64, activation='relu'))
-        model.add(Conv1D(16, 8, activation='relu', padding="same"))
+        model.add(Conv1D(8, 8, activation='relu', padding="same"))
         model.add(Flatten())
         model.add(Dense(2, activation='softmax'))
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=["acc",
-                                                                                  keras.metrics.Precision(),
-                                                                                  keras.metrics.Recall()])
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=["acc"])
         model.summary()
         self.model = model
 
@@ -52,8 +50,10 @@ class PassFinderContextClassifier(PwdClassifier):
         """
         logging.info("pre-processing train data...")
         processed_docs_train = []
+        stop = '[’!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~]+'
         for doc in tqdm(texts):
-            doc = list(doc)
+            tmp_text = re.sub(stop, ' ', doc)
+            doc = list(tmp_text)
             processed_docs_train.append(doc)
         return processed_docs_train
 

@@ -3,24 +3,9 @@ import pickle
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from keras.utils.np_utils import to_categorical
-from sklearn.metrics import confusion_matrix, plot_confusion_matrix, ConfusionMatrixDisplay
-from sklearn.model_selection import train_test_split
-
 
 from passwd.pwdClassifier import HASHPwdClassifier, NgramPwdClassifier, FastTextPwdClassifier
-from tokenizer.tool import train_valid_split
-
-
-def load_pkl(src):
-    with open(src, 'rb') as f:
-        data = pickle.load(f)
-    return data
-
-
-def save_pkl(src, obj):
-    with open(src, 'wb') as f:
-        pickle.dump(obj, f)
+from tokenizer.tool import train_valid_split, load_pkl
 
 
 def pwdNgram():

@@ -19,10 +19,8 @@ namestr = var.getName() and
       namestr.regexpMatch("\\w*secret\\w*") or
       namestr.regexpMatch("\\w*token\\w*") or
       namestr.regexpMatch("\\w*auth\\w*") or
-      namestr.regexpMatch("\\w*host\\w*") or
-      namestr.regexpMatch("\\w*server\\w*") or
-	  namestr.regexpMatch("\\w*username\\w*") or
-      namestr.regexpMatch("\\w*account\\w*")
+            namestr.regexpMatch("\\w*security\\w*") or
+            namestr.regexpMatch("\\w*seed\\w*")
 	)
 
 select var.getName().toString(), var.getInitializer().getExpr().getValue(), var.getInitializer().getLocation().getStartLine(), var.getInitializer().getLocation()

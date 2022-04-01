@@ -42,7 +42,7 @@ class RemoteAnalyzer(object):
             if first_byte >= file_size: # (4)
                 return file_size
 
-            pbar = tqdm(total=file_size, initial=first_byte, unit='B', unit_scale=True, desc=file_path)
+            pbar = tqdm(total=file_size, initial=first_byte, unit='B', unit_scale=True, desc=file_path.split('/')[-1])
 
             req = requests.get(url, headers=headers, stream=True)
 

@@ -12,7 +12,7 @@
 ## LGTM数据库准本
 需要先将LGTM数据下载到本地，假设地址为 `$project-home$`
 
-在`$project-home$`目录下使用 `for z in *.zip; do unzip $z; done` 直接解压所有zip文件，
+在`$project-home$`目录下使用 `for z in *.zip; do unzip $z && rm $z; done` 直接解压所有zip文件，
 注意只要保证解压出的文件不含有二级目录即可，也可用其他方法解压。
 
 ## 结构说明

@@ -4,16 +4,7 @@ import pickle
 from sklearn.model_selection import train_test_split
 
 from passwd.passTool import merge_and_label
-
-def load_pkl(src):
-    with open(src, 'rb') as f:
-        data = pickle.load(f)
-    return data
-
-
-def save_pkl(src, obj):
-    with open(src, 'wb') as f:
-        pickle.dump(obj, f)
+from tokenizer.tool import load_pkl, save_pkl
 
 
 def split_train_and_test():

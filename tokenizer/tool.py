@@ -5,6 +5,17 @@ from sklearn.model_selection import train_test_split
 import numpy as np
 
 
+def load_pkl(src):
+    with open(src, 'rb') as f:
+        data = pickle.load(f)
+    return data
+
+
+def save_pkl(src, obj):
+    with open(src, 'wb') as f:
+        pickle.dump(obj, f)
+
+
 class MyTokenizer(object):
     def __init__(self, **kwargs):
         self.tokenizer = Tokenizer(**kwargs)

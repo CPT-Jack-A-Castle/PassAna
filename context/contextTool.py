@@ -69,14 +69,21 @@ def merge_and_label(myofpassfinder):
     """
     if myofpassfinder == "my":
         pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
+        gen_context = pd.read_csv('raw_dataset/mycontext_pass_gen.csv')["context"]
         str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"]
+        ary = [str_context, gen_context, pass_context]
+    elif myofpassfinder == "nogan":
+        pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
+        str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"]
+        ary = [str_context, pass_context]
     else:
         pass_context = pd.read_csv('raw_dataset/passfindercontext_pass.csv')["context"]
         str_context = pd.read_csv('raw_dataset/passfindercontext_str.csv')["context"]
+        ary = [str_context, pass_context]
 
     data = []
     label = []
-    for i, p in enumerate([pass_context, str_context]):
+    for i, p in enumerate(ary):
         p = p.dropna()
         p = p.to_numpy().reshape(-1).tolist()
         label.extend(np.zeros(len(p), dtype=int) + i)
@@ -85,6 +92,8 @@ def merge_and_label(myofpassfinder):
     label = pd.DataFrame(label, dtype=int)
     if myofpassfinder == "my":
         out_label = "my"
+    elif myofpassfinder == "nogan":
+        out_label = "nogan"
     else:
         out_label = "passfinder"
 

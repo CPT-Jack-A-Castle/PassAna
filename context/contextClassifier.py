@@ -1,20 +1,24 @@
 import logging
+import re
 from abc import abstractmethod, ABC
 from re import finditer
 
+import gensim
+import nltk
 import numpy as np
-import pandas as pd
-from datasets import load_dataset
+from gensim.models import Doc2Vec
 from keras import Input
 from keras.layers import Dense, Conv1D, GlobalMaxPooling1D, MaxPooling1D, Dropout, Flatten, BatchNormalization, LSTM, \
     LeakyReLU
 from keras.layers import Embedding
 from keras.models import Sequential, Model, load_model
-from tensorflow import floor
-from tensorflow.keras.utils import to_categorical
+from keras.utils.np_utils import to_categorical
 from keras_preprocessing.sequence import pad_sequences
+from keras_preprocessing.text import text_to_word_sequence
+import spacy
+from nltk import word_tokenize
 
-from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding
+from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding, save_pkl, load_pkl
 
 MAX_NB_WORDS = 10000
 
@@ -64,10 +68,13 @@ class ContextClassifier:
         :return: texts, labels
         """
         logging.info("pre-processing train data...")
+        stop = '[’!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~]+'
+
         for i in range(len(texts)):
-            tmp_text = texts[i].replace(".", " ").replace(";", " ").replace("_", " ")
+            tmp_text = re.sub(stop, ' ', texts[i])
             tmp_text = camel_case_split(tmp_text)
-            texts[i] = " ".join(tmp_text)
+            tmp_text = " ".join(tmp_text).lower()
+            texts[i] = tmp_text
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
@@ -78,14 +85,22 @@ class ContextClassifier:
 
         # integer encode the documents
         encoded_docs = self.tokenizer.texts_to_sequences(texts)
-        # pad documents to a max length of 128 words
-        texts = pad_sequences(encoded_docs, maxlen=self.padding_len, padding='post')
+        # pad documents to a max length of padding_len words
+        texts = pad_sequences(encoded_docs, maxlen=self.padding_len)
         # trans label to label type
         labels = to_categorical(labels)
 
         return texts, labels
 
-    def words2vec_generator(self, texts, fit=True):
+    def words2vec_text(self, texts):
+        # integer encode the documents
+        encoded_docs = self.tokenizer.texts_to_sequences(texts)
+        # pad documents to a max length of 128 words
+        texts = pad_sequences(encoded_docs, maxlen=self.padding_len)
+
+        return texts
+
+    def words2vec_tokenizer(self, texts, fit=True):
         """
         Map raw texts to int vector
         :param texts: [ [], [],..., [] ]
@@ -94,9 +109,14 @@ class ContextClassifier:
         """
         logging.info("pre-processing train data...")
         for i in range(len(texts)):
-            tmp_text = texts[i].replace(".", " ").replace(";", " ").replace("_", " ")
-            tmp_text = camel_case_split(tmp_text)
-            texts[i] = " ".join(tmp_text)
+            try:
+                tmp_text = texts[i].replace(".", " ").replace(";", " ").replace("_", " ")
+                tmp_text = camel_case_split(tmp_text)
+                tmp_text = " ".join(tmp_text)
+                out_text = nltk.word_tokenize(tmp_text)
+                texts[i] = out_text
+            except Exception as e:
+                print()
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
@@ -105,12 +125,11 @@ class ContextClassifier:
             self.tokenizer.load_tokenizer("tokenizer/generator.pkl")
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
-        # integer encode the documents
-        encoded_docs = self.tokenizer.texts_to_sequences(texts)
-        # pad documents to a max length of 128 words
-        texts = pad_sequences(encoded_docs, maxlen=self.padding_len, padding='post')
+    def save_model(self, src):
+        self.model.save(f"{src}")
 
-        return texts
+    def load_model(self, src):
+        self.model = load_model(f"{src}")
 
 
 class CNNClassifierGlove(ContextClassifier, ABC):
@@ -174,7 +193,7 @@ class GAN(ContextClassifier):
         super(GAN, self).__init__(padding_len, debug)
         self.glove_dim = glove_dim
         self.embedding_matrix = None
-        self.latent_dim = 100
+        self.latent_dim = 200
         self.generator = None
         self.discriminator: Sequential = None
         self.combined: Sequential = None
@@ -227,9 +246,12 @@ class GAN(ContextClassifier):
 
     def build_discriminator(self):
         model = Sequential()
-        model.add(Dense(256, input_shape=(self.padding_len, 1)))
-        model.add(Conv1D(16, 16, activation='relu', padding='same'))
-        model.add(Conv1D(16, 8, activation='relu', padding='same'))
+        model.add(Conv1D(16, 16, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
+        model.add(Dense(128, activation='relu'))
+        model.add(Conv1D(8, 16, activation='relu', padding="same"))
+        model.add(Dense(128, activation='relu'))
+        model.add(Conv1D(4, 16, activation='relu', padding="same"))
+        model.add(Dense(128, activation='relu'))
         model.add(Flatten())
         model.add(Dense(1, activation='sigmoid'))
         model.summary()
@@ -239,18 +261,18 @@ class GAN(ContextClassifier):
 
         return Model(vector, validity)
 
-    def train(self, train_data, epochs, batch_size=128, sample_interval=100):
+    def train(self, pass_data, epochs, batch_size=128, sample_interval=100):
         self.half_size = self.tokenizer.vocab_size() / 2
 
-        # Load the dataset
-        X_train = train_data
         # Rescale -1 to 1
-        X_train = (X_train.astype(np.float32) - self.half_size) / self.half_size
+        pass_data = (pass_data.astype(np.float32) - self.half_size) / self.half_size
+        # str_context = (str_context.astype(np.float32) - self.half_size) / self.half_size
 
         # Adversarial ground truths
-        valid = np.ones((batch_size, 1))
         fake = np.zeros((batch_size, 1))
-
+        valid = np.ones((batch_size, 1))
+        # batch_size_p = (batch_size // 4) * 3
+        # batch_size_s = (batch_size // 4) * 1
         for epoch in range(epochs):
 
             # ---------------------
@@ -258,8 +280,16 @@ class GAN(ContextClassifier):
             # ---------------------
 
             # Select a random batch of text
-            idx = np.random.randint(0, X_train.shape[0], batch_size)
-            vectors = X_train[idx]
+            # idx = np.random.randint(0, pass_data.shape[0], batch_size_p)
+            # vectors_1 = pass_data[idx]
+            # idx = np.random.randint(0, str_context.shape[0], batch_size_s)
+            # vectors_2 = str_context[idx]
+            idx = np.random.randint(0, pass_data.shape[0], batch_size)
+            vectors = pass_data[idx]
+
+            # merge
+            # vectors = np.r_[vectors_1, vectors_2]
+            # valid = np.r_[np.ones(batch_size_p), np.zeros(batch_size_s)]
 
             noise = np.random.normal(0, 1, (batch_size, self.latent_dim))
 
@@ -279,6 +309,7 @@ class GAN(ContextClassifier):
             noise = np.random.normal(0, 1, (batch_size, self.latent_dim))
 
             # Train the generator (to have the discriminator label samples as valid)
+
             g_loss = self.combined.train_on_batch(noise, valid)
 
             # Plot the progress
@@ -304,9 +335,12 @@ class GAN(ContextClassifier):
 
     def save_generator(self):
         self.generator.save('model/context/generator.h5')
+        save_pkl('model/context/half_size', self.half_size)
 
     def load_generator(self):
         self.generator = load_model('model/context/generator.h5')
+        self.half_size = load_pkl('model/context/half_size')
+        self.tokenizer.load_tokenizer("tokenizer/generator.pkl")
 
     def generator_texts(self, num):
         if self.generator is None:
@@ -323,19 +357,3 @@ class GAN(ContextClassifier):
         text = self.tokenizer.decode_vectors(gen_txts)
 
         return text
-
-# if __name__ == '__main__':
-#     dataset = load_dataset('sst', 'default')
-#
-#     X = np.array(dataset.data['train'][0])
-#     Y = np.array(dataset.data['train'][1]).round()
-#
-#     cnnClassifier = CNNClassifierGlove(padding_len=128, glove_dim=50)
-#
-#     X, Y = cnnClassifier.words2vec_generator(X, Y, fit=False)
-#     cnnClassifier.get_matrix_6b(f"D:\\program\\glove.6B")
-#
-#     train_data, valid_data = train_valid_split(X, Y)
-#
-#     cnnClassifier.create_model()
-#     cnnClassifier.run(train_data, valid_data, epochs=32, batch_size=64)
