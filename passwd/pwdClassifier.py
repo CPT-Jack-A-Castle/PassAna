@@ -61,6 +61,7 @@ class FastTextPwdClassifier(PwdClassifier):
     """
     Work bad
     """
+
     def __init__(self, padding_len, class_num, embedding_dim=50, debug=False):
         super(FastTextPwdClassifier, self).__init__(padding_len, class_num, debug)
         self.embedding_dim = embedding_dim
@@ -151,6 +152,7 @@ class HASHPwdClassifier(PwdClassifier):
     """
     Work Bad, hash method can not classifier the password and random string.
     """
+
     def __init__(self, padding_len, class_num, debug=False):
         super(HASHPwdClassifier, self).__init__(padding_len, class_num, debug)
 
@@ -211,7 +213,7 @@ class HASHPwdClassifier(PwdClassifier):
             # MD5 has 16 and SHA256 has 32
             vector = np.zeros(32)
             for index, i in enumerate(np.arange(len(text), step=step)):
-                vector[index] = int.from_bytes(text[i:i+step], byteorder=sys.byteorder)
+                vector[index] = int.from_bytes(text[i:i + step], byteorder=sys.byteorder)
             vectors.append(vector)
 
         # to numpy matrix
@@ -221,7 +223,6 @@ class HASHPwdClassifier(PwdClassifier):
         labels = to_categorical(labels)
 
         return vectors, labels
-
 
     @staticmethod
     def data2NNform(X):
@@ -272,7 +273,7 @@ class NgramPwdClassifier(PwdClassifier):
         tokenizer.fit_on_texts(processed_docs_train)
         self.tokenizer = tokenizer
 
-    def words2vec(self, texts, labels, n=4, fit=True):
+    def words2vec(self, texts, labels=None, n=4, fit=True):
         """
         Transform the password and str to vector by n-gran + tokenizer method.
         to int number
@@ -305,7 +306,8 @@ class NgramPwdClassifier(PwdClassifier):
         # pad documents to a max length of 4 words
         texts = pad_sequences(encoded_docs, maxlen=self.padding_len)
         # trans label to label type
-        labels = to_categorical(labels)
+        if labels is not None:
+            labels = to_categorical(labels)
 
         return texts, labels
 

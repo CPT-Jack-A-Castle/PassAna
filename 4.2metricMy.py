@@ -31,18 +31,8 @@ if __name__ == '__main__':
     # Y = load_pkl('./dataset/context_test_label.pkl').reshape(-1)
     # Y = np.minimum(Y, np.ones(Y.shape))
 
-    pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
-    str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"].sample(50)
-
-    X = []
-    Y = []
-    for i, p in enumerate([str_context, pass_context]):
-        p = p.dropna()
-        p = p.to_numpy().reshape(-1).tolist()
-        Y.extend(np.zeros(len(p), dtype=int) + i)
-        X.extend(p)
-    X = pd.DataFrame(X, dtype=str).to_numpy().reshape(-1)
-    Y = pd.DataFrame(Y, dtype=int).to_numpy().reshape(-1)
+    X = load_pkl('./dataset/nogan_test_data.pkl').reshape(-1)
+    Y = load_pkl('./dataset/nogan_test_label.pkl').reshape(-1)
 
     cnnContextClassifier = CNNClassifierGlove(padding_len=256)
 

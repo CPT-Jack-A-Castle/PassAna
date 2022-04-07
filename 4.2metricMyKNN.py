@@ -1,10 +1,11 @@
 import pickle
+
+import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 
-from context.contextClassifier import CNNClassifierGlove
-from context.passFinderContext import PassFinderContextClassifier
+from context.contextClassifier import CNNClassifierGlove, KNNClassifier
 from passwd.pwdClassifier import NgramPwdClassifier
 import numpy as np
 
@@ -25,17 +26,17 @@ def draw_map(cf_matrix, label):
     ## Display the visualization of the Confusion Matrix.
     # plt.show()
 
-
 if __name__ == '__main__':
-    X = load_pkl('./dataset/passfinder_context_test_data.pkl').reshape(-1)
-    Y = load_pkl('./dataset/passfinder_context_test_label.pkl').reshape(-1)
+    X = load_pkl('./dataset/nogan_test_data.pkl').reshape(-1)
+    Y = load_pkl('./dataset/nogan_test_label.pkl').reshape(-1)
 
-    passFinderContextClassifier = PassFinderContextClassifier(padding_len=256)
+    knnClassifier = KNNClassifier(padding_len=256)
+    knnClassifier.create_model()
 
-    X, Y = passFinderContextClassifier.words2vec(X, Y, fit=False)
-    passFinderContextClassifier.load_model('model/context/model_passfinder.h5')
+    X, Y = knnClassifier.words2vec(X, Y, fit=False)
+    knnClassifier.load_model('model/context/model_my_knn.pkl')
 
-    y_pred = passFinderContextClassifier.model.predict(X)
+    y_pred = knnClassifier.model.predict(X)
 
     Y = Y.argmax(axis=1)
     y_pred = y_pred.argmax(axis=1)

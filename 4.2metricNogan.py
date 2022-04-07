@@ -27,17 +27,20 @@ def draw_map(cf_matrix, label):
     # plt.show()
 
 if __name__ == '__main__':
-    pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
-    str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"].sample(1000)
-    X = []
-    Y = []
-    for i, p in enumerate([str_context, pass_context]):
-        p = p.dropna()
-        p = p.to_numpy().reshape(-1).tolist()
-        Y.extend(np.zeros(len(p), dtype=int) + i)
-        X.extend(p)
-    X = pd.DataFrame(X, dtype=str).to_numpy().reshape(-1)
-    Y = pd.DataFrame(Y, dtype=int).to_numpy().reshape(-1)
+    X = load_pkl('./dataset/nogan_test_data.pkl').reshape(-1)
+    Y = load_pkl('./dataset/nogan_test_label.pkl').reshape(-1)
+
+    # pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"]
+    # str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"].sample(1000)
+    # X = []
+    # Y = []
+    # for i, p in enumerate([str_context, pass_context]):
+    #     p = p.dropna()
+    #     p = p.to_numpy().reshape(-1).tolist()
+    #     Y.extend(np.zeros(len(p), dtype=int) + i)
+    #     X.extend(p)
+    # X = pd.DataFrame(X, dtype=str).to_numpy().reshape(-1)
+    # Y = pd.DataFrame(Y, dtype=int).to_numpy().reshape(-1)
 
     cnnContextClassifier = CNNClassifierGlove(padding_len=512)
 

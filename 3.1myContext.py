@@ -4,8 +4,8 @@ import pandas as pd
 
 
 if __name__ == '__main__':
-    language = 'javascript'
-    base = '/media/rain/data/js_zip'
+    language = 'java'
+    base = '/media/rain/data/java_zip'
     for str_label in ['pass']:
         analyzer = init_analyzer(language)
 
@@ -13,7 +13,7 @@ if __name__ == '__main__':
             analyzer.get_context_for_strs(base, f'csv/{language}/{str_label}.csv', skip=False)
             context_to = analyzer.merge_csv(base, 'context_str')
         else:
-            analyzer.get_context_for_passs(base, f'csv/{language}/{str_label}.csv', skip=True)
+            analyzer.get_context_for_passs(base, f'csv/{language}/{str_label}2.csv', skip=True)
             context_to = analyzer.merge_csv(base, 'context_pass')
         context_to = context_to.drop(columns="project")
         source = pd.read_csv(f'csv/{language}/{str_label}.csv', index_col=0)
@@ -25,5 +25,5 @@ if __name__ == '__main__':
         if str_label == "string":
             out.to_csv(f'csv/{language}/mycontext_string.csv')
         else:
-            out.to_csv(f'csv/{language}/mycontext_pass.csv')
+            out.to_csv(f'csv/{language}/mycontext_pass2.csv')
 

@@ -158,7 +158,7 @@ def pass_finder_context(projs_path: str, source_path: str, out_path):
         archive = zipfile.ZipFile(f'{project}/src.zip', 'r')
         for line, location in zip(lines, locations):
             # find text
-            local_location = location.replace("file://", "").split(":")[0]# [1:]
+            local_location = location.replace("file://", "").split(":")[0][1:]
             try:
                 texts = archive.read(local_location)
                 texts = texts.decode("utf-8").split('\n')

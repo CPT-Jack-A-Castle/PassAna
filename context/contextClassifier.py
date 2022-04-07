@@ -1,8 +1,10 @@
 import logging
+import pickle
 import re
 from abc import abstractmethod, ABC
 from re import finditer
 
+from sklearn.utils import compute_class_weight
 import gensim
 import nltk
 import numpy as np
@@ -17,10 +19,12 @@ from keras_preprocessing.sequence import pad_sequences
 from keras_preprocessing.text import text_to_word_sequence
 import spacy
 from nltk import word_tokenize
+from sklearn.neighbors import KNeighborsClassifier
 
 from tokenizer.tool import MyTokenizer, train_valid_split, load_embedding, save_pkl, load_pkl
 
 MAX_NB_WORDS = 10000
+
 
 
 def camel_case_split(identifier):
@@ -49,17 +53,31 @@ class ContextClassifier:
     def create_model(self):
         pass
 
-    def run(self, train, valid, epochs, batch_size):
+    def run(self, train, valid, epochs, batch_size, imbalance=False):
         if self.model is None:
             logging.error('Model is None')
             raise ValueError('Create model at first!')
         logging.info(f"X: {train[0].shape} Y:{train[1].shape}")
-        self.model.fit(train[0], train[1],
-                       epochs=epochs, batch_size=batch_size,
-                       validation_data=(valid[0], valid[1]),
-                       shuffle=True)
 
-    def words2vec(self, texts, labels, fit=True):
+        # if sample imbalance
+        if imbalance:
+            tmp_y = np.argmax(train[1], axis=1)
+            weights = compute_class_weight(class_weight='balanced', classes=[0, 1], y=tmp_y)
+            self.model.fit(train[0], train[1],
+                           epochs=epochs, batch_size=batch_size,
+                           validation_data=(valid[0], valid[1]),
+                           class_weight={0: weights[0], 1: weights[1]},
+                           shuffle=True)
+        else:
+            self.model.fit(train[0], train[1],
+                           epochs=epochs, batch_size=batch_size,
+                           validation_data=(valid[0], valid[1]),
+                           shuffle=True)
+
+    def sklearn_run(self, train):
+        self.model.fit(train[0], train[1])
+
+    def words2vec(self, texts, labels=None, fit=True):
         """
         Map raw texts to int vector
         :param texts: [ [], [],..., [] ]
@@ -88,7 +106,8 @@ class ContextClassifier:
         # pad documents to a max length of padding_len words
         texts = pad_sequences(encoded_docs, maxlen=self.padding_len)
         # trans label to label type
-        labels = to_categorical(labels)
+        if labels is not None:
+            labels = to_categorical(labels)
 
         return texts, labels
 
@@ -108,15 +127,13 @@ class ContextClassifier:
         :return: texts, labels
         """
         logging.info("pre-processing train data...")
+        stop = '[’!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~]+'
+
         for i in range(len(texts)):
-            try:
-                tmp_text = texts[i].replace(".", " ").replace(";", " ").replace("_", " ")
-                tmp_text = camel_case_split(tmp_text)
-                tmp_text = " ".join(tmp_text)
-                out_text = nltk.word_tokenize(tmp_text)
-                texts[i] = out_text
-            except Exception as e:
-                print()
+            tmp_text = re.sub(stop, ' ', texts[i])
+            tmp_text = camel_case_split(tmp_text)
+            tmp_text = " ".join(tmp_text).lower()
+            texts[i] = tmp_text
 
         if fit:
             self.tokenizer.fit_on_texts(texts)
@@ -126,10 +143,18 @@ class ContextClassifier:
         logging.info(f"Dictionary size: {self.tokenizer.vocab_size()}")
 
     def save_model(self, src):
-        self.model.save(f"{src}")
+        if isinstance(self.model, KNeighborsClassifier):
+            with open(src, 'wb') as f:
+                pickle.dump(self.model, f)
+        else:
+            self.model.save(f"{src}")
 
     def load_model(self, src):
-        self.model = load_model(f"{src}")
+        if isinstance(self.model, KNeighborsClassifier):
+            with open(src, 'rb') as f:
+                self.model = pickle.load(f)
+        else:
+            self.model = load_model(f"{src}")
 
 
 class CNNClassifierGlove(ContextClassifier, ABC):
@@ -165,6 +190,45 @@ class CNNClassifierGlove(ContextClassifier, ABC):
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         model.summary()
         self.model = model
+
+    def get_matrix_6b(self, src):
+        """
+        get embedding_matrix from src
+        :param src:
+        :param length:
+        :return:
+        """
+        # Certain the glove_dim
+        path = f"{src}/glove.6B.{self.glove_dim}d.txt"
+
+        # Load glve 6B
+        embeddings_index = load_embedding(path)
+        # create a weight matrix for words in training docs
+        embedding_matrix = np.zeros((self.tokenizer.vocab_size(), self.glove_dim))
+
+        for word, i in self.tokenizer.word_index().items():
+            embedding_vector = embeddings_index.get(word)
+            if embedding_vector is not None:
+                embedding_matrix[i] = embedding_vector
+        self.embedding_matrix = embedding_matrix
+
+
+class KNNClassifier(ContextClassifier, ABC):
+    def __init__(self, padding_len, glove_dim=50, debug=False):
+        super(KNNClassifier, self).__init__(padding_len, debug)
+        if glove_dim not in [50, 100, 200, 300]:
+            logging.error(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
+            raise ValueError(f'Not support this glove_dim -- {glove_dim}, which must in [50, 100, 200, 300]')
+
+        self.glove_dim = glove_dim
+        self.embedding_matrix = None
+
+    def create_model(self):
+        """
+        create keras model
+        :return:
+        """
+        self.model = KNeighborsClassifier()
 
     def get_matrix_6b(self, src):
         """
@@ -246,13 +310,15 @@ class GAN(ContextClassifier):
 
     def build_discriminator(self):
         model = Sequential()
-        model.add(Conv1D(16, 16, activation='relu', padding="same", input_shape=(self.padding_len, 1)))
-        model.add(Dense(128, activation='relu'))
-        model.add(Conv1D(8, 16, activation='relu', padding="same"))
-        model.add(Dense(128, activation='relu'))
-        model.add(Conv1D(4, 16, activation='relu', padding="same"))
-        model.add(Dense(128, activation='relu'))
+        model.add(Conv1D(16, 9, padding="same", input_shape=(self.padding_len, 1)))
+        model.add(Conv1D(8, 9, padding='same'))
+        model.add(MaxPooling1D(3, 3, padding='same'))
+        model.add(Conv1D(4, 9, padding='same'))
+        model.add(MaxPooling1D(3, 3, padding='same'))
+        model.add(Conv1D(2, 9, padding='same'))
         model.add(Flatten())
+        model.add(Dropout(0.1))
+        model.add(BatchNormalization())  # (批)规范化层
         model.add(Dense(1, activation='sigmoid'))
         model.summary()
 
@@ -263,7 +329,6 @@ class GAN(ContextClassifier):
 
     def train(self, pass_data, epochs, batch_size=128, sample_interval=100):
         self.half_size = self.tokenizer.vocab_size() / 2
-
         # Rescale -1 to 1
         pass_data = (pass_data.astype(np.float32) - self.half_size) / self.half_size
         # str_context = (str_context.astype(np.float32) - self.half_size) / self.half_size
@@ -312,11 +377,9 @@ class GAN(ContextClassifier):
 
             g_loss = self.combined.train_on_batch(noise, valid)
 
-            # Plot the progress
-            print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100 * d_loss[1], g_loss))
-
             # If at save interval => save generated image samples
             if epoch % sample_interval == 0:
+                print("%d [D loss: %f, acc.: %.2f%%] [G loss: %f]" % (epoch, d_loss[0], 100 * d_loss[1], g_loss))
                 self.print_text()
 
     def print_text(self):

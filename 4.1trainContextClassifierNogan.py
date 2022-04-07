@@ -9,7 +9,7 @@ if __name__ == '__main__':
     X = load_pkl('./dataset/nogan_train_data.pkl').reshape(-1)
     Y = load_pkl('./dataset/nogan_train_label.pkl').reshape(-1)
 
-    cnnContextClassifier = CNNClassifierGlove(padding_len=256, glove_dim=100)
+    cnnContextClassifier = CNNClassifierGlove(padding_len=512, glove_dim=100)
 
     X, Y = cnnContextClassifier.words2vec(X, Y, fit=False)
 
@@ -20,6 +20,6 @@ if __name__ == '__main__':
     train_data, valid_data = [X, np.array(Y, dtype=int)], [X_t, np.array(Y_t, dtype=int)]
 
     cnnContextClassifier.create_model()
-    cnnContextClassifier.run(train_data, valid_data, epochs=50, batch_size=128)
+    cnnContextClassifier.run(train_data, valid_data, epochs=50, batch_size=512, imbalance=True)
 
     cnnContextClassifier.save_model('model/context/model_nogan.h5')
