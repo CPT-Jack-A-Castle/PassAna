@@ -287,6 +287,7 @@ class NgramPwdClassifier(PwdClassifier):
         words = []
         for text in tqdm(texts):
             try:
+                text = text.lower().replace("-", '')
                 tmp = [text[x:x + y] for y in range(1, n) for x in range(0, len(text))]
                 words.append(list(tmp))
             except Exception as e:

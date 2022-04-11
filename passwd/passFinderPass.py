@@ -83,7 +83,7 @@ class PassFinderPassClassifier(PwdClassifier):
 
         return word_seq_train
 
-    def words2vec(self, texts, labels, fit=True):
+    def words2vec(self, texts, labels=None, fit=True):
         """
         Map raw texts to int vector
         :param texts: [ [], [],..., [] ]
@@ -109,6 +109,7 @@ class PassFinderPassClassifier(PwdClassifier):
         # padding the cols to padding_len
         texts = sequence.pad_sequences(texts, maxlen=self.padding_len)
         # trans label to label type
-        labels = to_categorical(labels)
+        if labels is not None:
+            labels = to_categorical(labels)
 
         return texts, labels

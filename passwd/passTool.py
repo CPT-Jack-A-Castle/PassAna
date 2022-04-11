@@ -90,9 +90,10 @@ def generate_random_pass(num):
 
 def generate_random_token(num):
     tokens = []
-    for count in [40, 35, 32, 24]:
+    tmp_char = " ".join(string.ascii_letters + string.digits).split(' ')
+    for count in range(16, 64, 2):
         for i in range(num):
-            tmp = random.sample(string.ascii_letters + string.digits, count)
+            tmp = np.random.choice(tmp_char, size=count, replace=True)
             token = ''.join(tmp)
             tokens.append(token)
     tokens = pd.DataFrame(tokens)
@@ -120,9 +121,9 @@ def remove_pass_from_string(src):
 
 def merge_and_label():
     nopass_str = pd.read_csv('raw_dataset/nopass_str.csv')
-    randowm_pass = pd.read_csv('raw_dataset/random_pass.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
-    user_pass = pd.read_csv('raw_dataset/password.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
-    tokens = pd.read_csv('raw_dataset/tokens.csv').sample(200000)#, chunksize=100000).get_chunk(100000)
+    randowm_pass = pd.read_csv('raw_dataset/random_pass.csv')# .sample(200000)#, chunksize=100000).get_chunk(100000)
+    user_pass = pd.read_csv('raw_dataset/password.csv').sample(1000000)#, chunksize=100000).get_chunk(100000)
+    tokens = pd.read_csv('raw_dataset/tokens.csv')# .sample(00000)#, chunksize=100000).get_chunk(100000)
 
     data = []
     label = []

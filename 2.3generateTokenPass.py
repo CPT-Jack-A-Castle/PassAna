@@ -4,5 +4,5 @@ if __name__ == '__main__':
     """
     生成token密码
     """
-    generate_random_token(300000)
+    generate_random_token(10000)
     three_sigma_deduce("raw_dataset/tokens.csv")

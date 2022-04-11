@@ -14,7 +14,7 @@ def pwdNgram():
 
     ngramPwdClassifier = NgramPwdClassifier(padding_len=512, class_num=4, glove_dim=100)
 
-    X, Y = ngramPwdClassifier.words2vec(X, Y, n=3, fit=False)
+    X, Y = ngramPwdClassifier.words2vec(X, Y, n=3, fit=True)
     # X, X_t, Y, Y_t = train_test_split(X, Y, stratify=Y, test_size=0.2)
 
     ngramPwdClassifier.get_matrix_6b(f"/home/rain/glove")

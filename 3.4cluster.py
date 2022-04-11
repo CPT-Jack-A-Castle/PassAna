@@ -47,9 +47,9 @@ def words2vec(texts, labels, fit=True):
 
 
 if __name__ == '__main__':
-    pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"].sample(300)
-    gen_context = pd.read_csv('raw_dataset/mycontext_pass_gen.csv')["context"].sample(300)
-    str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"].sample(8000)
+    pass_context = pd.read_csv('raw_dataset/mycontext_pass.csv')["context"].sample(200)
+    gen_context = pd.read_csv('raw_dataset/mycontext_pass_gen.csv')["context"].sample(200)
+    str_context = pd.read_csv('raw_dataset/mycontext_str.csv')["context"].sample(3000)
 
     data = []
     label = []
@@ -66,6 +66,13 @@ if __name__ == '__main__':
     lda = PCA(n_components=2)
     lda.fit(X, Y)
     X_new = lda.transform(X)
+    X_new = pd.DataFrame(X_new, columns=['x', 'y'])
+    X_new['label'] = Y
+    X_new = X_new[X_new['x'].abs() < 3000]
+    X_new = X_new[X_new['y'].abs() < 3000]
+
+    Y = X_new['label'].to_numpy()
+    X_new = X_new[['x', 'y']].to_numpy()
 
     for i, name in enumerate(["Ordinary Text Context", "Credential Context", "GAN Generator Context"]):
         index = (Y == i)

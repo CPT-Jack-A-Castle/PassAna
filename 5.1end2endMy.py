@@ -2,6 +2,8 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 from context.contextClassifier import CNNClassifierGlove
+from context.passFinderContext import PassFinderContextClassifier
+from passwd.passFinderPass import PassFinderPassClassifier
 from passwd.pwdClassifier import NgramPwdClassifier
 import pandas as pd
 import numpy as np
@@ -18,14 +20,17 @@ def first_model(X):
 
 
 def second_model(X):
+    X = X['context'].to_numpy().reshape(-1)
     cnnContextClassifier = CNNClassifierGlove(padding_len=256)
 
-    X, Y = cnnContextClassifier.words2vec(X, fit=False)
+    X, _ = cnnContextClassifier.words2vec(X, fit=False)
     cnnContextClassifier.load_model('model/context/model_my.h5')
 
     y_pred = cnnContextClassifier.model.predict(X)
 
     return y_pred
+
+
 
 
 def draw_map(cf_matrix, label):
@@ -40,27 +45,37 @@ def draw_map(cf_matrix, label):
     ax.yaxis.set_ticklabels(label)
 
 
-if __name__ == '__main__':
-    credential = pd.read_csv('raw_dataset/mycontext_pass.csv').dropna().sample(300)
-    credential['line'] = credential['line'].astype(int)
-    ordinary = pd.read_csv('raw_dataset/mycontext_str.csv').sample(300)
+def create():
+    credential_my = pd.read_csv('raw_dataset/mycontext_pass.csv').dropna()
+    credential_my['line'] = credential_my['line'].astype(int)
+    ordinary_my = pd.read_csv('raw_dataset/mycontext_str.csv')
+    ordinary_my['line'] = ordinary_my['line'].astype(int)
 
+    credential_finder = pd.read_csv('raw_dataset/passfindercontext_pass.csv').drop_duplicates().rename(columns={'context':'finder_context'})
+    credential_finder['line'] = credential_finder['line'].astype(int)
+    ordinary_finder = pd.read_csv('raw_dataset/passfindercontext_str.csv').drop_duplicates().rename(columns={'context':'finder_context'}).dropna()
+    ordinary_finder = ordinary_finder[ordinary_finder['line'].str.isdecimal()]
+    ordinary_finder['line'] = ordinary_finder['line'].astype(int, errors='ignore')
+
+    credential = pd.merge(credential_my, credential_finder, on=['var', 'str', 'location', 'line', 'project'])
+    ordinary = pd.merge(ordinary_my, ordinary_finder, on=['var', 'str', 'location', 'line', 'project']).sample(500)
     X = pd.concat([credential, ordinary])
     Y = np.r_[np.ones(credential.shape[0]), np.zeros(ordinary.shape[0])]
+    X['raw_label'] = Y
+    X.to_csv('e2e/raw.csv', index=False)
 
+
+if __name__ == '__main__':
+    # create()
+    X = pd.read_csv('e2e/raw.csv')
     first_mark = first_model(X).argmax(axis=1)
     first_mark = np.minimum(np.ones(first_mark.shape), first_mark)
 
-    second_X = X[first_mark == 1]
-    second_Y = Y[first_mark == 1]
-
-    second_mark = second_model(second_X)
+    second_mark = second_model(X)
 
     second_mark = second_mark.argmax(axis=1)
 
-    matrix = confusion_matrix(Y, second_mark)
-    draw_map(matrix, ['Ordinary', 'Password'])
-    plt.show()
+    X['first'] = first_mark
+    X['second'] = second_mark
+    X.to_csv('e2e/checker.csv', index=False)
 
-    m = classification_report(Y, second_mark, digits=4)
-    print(m)
